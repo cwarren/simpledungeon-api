@@ -5,10 +5,32 @@ import { ObjectId } from 'mongodb';
 import { app } from '../app.js';
 import { getDb, dbClose } from '../dbClient.js';
 
-describe('Integration Test for Game Creation', function() {
+describe('Integration Test for Game Controller', function() {
   const baseUri = '/games';
 
+  async function insertTestingGame(testingGameData) {
+    const dbClient = getDb();
+    const result = await dbClient.collection("gamestate").insertOne(testingGameData);
+    return result.insertedId.toString();
+  }
+
+  // #############################################
+  
   let insertedGameId;
+  let existingGameId;
+
+  const existingGameData = {
+    name: 'TESTING: Retrieve by ID',
+    version: "0.0.2",
+    description: [[new Date(), "A game to test retrieval by ID"]]
+  };
+
+  before(async function() {
+    existingGameId = await insertTestingGame(existingGameData);
+  });
+
+  // #############################################
+  // create
 
   after(async function() {
     // Clean up: delete the test game from the database
@@ -64,4 +86,47 @@ describe('Integration Test for Game Creation', function() {
       expect(response.status, `Test failed for case: ${testCase.description}`).to.equal(testCase.expectedStatus);
     }
   });
+
+  // #############################################
+  // read
+
+  it('should successfully retrieve an existing game by its ID', async function() {
+    const readUri = `${baseUri}/${existingGameId}`;
+    const response = await request(app)
+      .get(readUri);
+
+    expect(response.status).to.equal(200);
+    expect(response.body).to.include({
+      _id: existingGameId,
+      name: existingGameData.name,
+    });
+  });
+
+  it('should return 404 for a non-existent game ID', async function() {
+    const nonExistentId = new ObjectId(); // Generate a new ObjectId that doesn't exist in the database
+    const readUri = `${baseUri}/${nonExistentId.toString()}`;
+    const response = await request(app)
+      .get(readUri);
+
+    expect(response.status).to.equal(404);
+    expect(response.text).to.equal('Game not found');
+  });
+
+  it('should return 500 for an invalid game ID format', async function() {
+    const invalidId = '123'; // An invalid ObjectId format
+    const readUri = `${baseUri}/${invalidId}`;
+    const response = await request(app)
+      .get(readUri);
+
+    expect(response.status).to.equal(500);
+    expect(response.text).to.include('Failed to fetch game');
+  });
+
+  // #############################################
+  // update
+
+  // #############################################
+  // delete
+
+
 });
