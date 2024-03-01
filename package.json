@@ -1,0 +1,33 @@
+{
+  "name": "simpledungeon",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.18.2",
+    "mongodb": "^6.3.0",
+    "nodemon": "^3.1.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.24.0",
+    "@babel/preset-env": "^7.24.0",
+    "@sinonjs/referee-sinon": "^12.0.0",
+    "chai": "^5.1.0",
+    "cross-env": "^7.0.3",
+    "jsverify": "^0.8.4",
+    "knuth-shuffle": "^1.0.8",
+    "mocha": "^10.3.0",
+    "sinon": "^17.0.1",
+    "supertest": "^6.3.4",
+    "util.promisify": "^1.1.2"
+  }
+}

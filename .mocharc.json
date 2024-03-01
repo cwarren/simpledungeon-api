@@ -1,0 +1,6 @@
+{
+    "recursive": true,
+    "exit": true,
+    "spec": "./**/*.sdtest.js"
+  }
+  
