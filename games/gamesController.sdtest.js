@@ -14,32 +14,40 @@ describe('Integration Test for Game Controller', function() {
     return result.insertedId.toString();
   }
 
+  // {"_id": ObjectId("4d512b45cc9374271b02ec4f")}
+  async function deleteTestingGame(testingGameIdString) {
+    if (testingGameIdString) {
+      const dbClient = getDb();
+      const result = await dbClient.collection("gamestate").deleteOne({"_id": new ObjectId(`${testingGameIdString}`)});
+      console.log('delete result:');
+      console.dir(result);
+      return result;
+    }
+  }
+
   // #############################################
   
-  let insertedGameId;
-  let existingGameId;
+  let insertedGameIdString;
+  let existingGameIdString;
 
   const existingGameData = {
-    name: 'TESTING: Retrieve by ID',
+    name: 'TESTING: Existing Game ID',
     version: "0.0.2",
-    description: [[new Date(), "A game to test retrieval by ID"]]
+    description: [[new Date(), "A game to test"]]
   };
 
   before(async function() {
-    existingGameId = await insertTestingGame(existingGameData);
+    existingGameIdString = await insertTestingGame(existingGameData);
+  });
+
+  after(async function() {
+    await deleteTestingGame(insertedGameIdString);
+    await deleteTestingGame(existingGameIdString);
+    await dbClose();
   });
 
   // #############################################
   // create
-
-  after(async function() {
-    // Clean up: delete the test game from the database
-    if (insertedGameId) {
-      const dbClient = getDb();
-      await dbClient.collection("gamestate").deleteOne({ _id: insertedGameId });
-    }
-    await dbClose();
-  });
 
   it('should create a new game with default values and validate its contents', async function() {
     const newGameName = 'TESTING:Dungeon Crawler';
@@ -50,10 +58,10 @@ describe('Integration Test for Game Controller', function() {
     expect(response.status).to.equal(201);
     expect(response.body).to.have.property('insertedId');
 
-    insertedGameId = new ObjectId(`${response.body.insertedId}`);
+    insertedGameIdString =`${response.body.insertedId}`;
 
     const dbClient = getDb();
-    const insertedGame = await dbClient.collection("gamestate").findOne({ _id: insertedGameId });
+    const insertedGame = await dbClient.collection("gamestate").findOne({ _id: new ObjectId(insertedGameIdString) });
 
     // console.log('Inserted game:');
     // console.dir(insertedGame);
@@ -91,13 +99,13 @@ describe('Integration Test for Game Controller', function() {
   // read
 
   it('should successfully retrieve an existing game by its ID', async function() {
-    const readUri = `${baseUri}/${existingGameId}`;
+    const readUri = `${baseUri}/${existingGameIdString}`;
     const response = await request(app)
       .get(readUri);
 
     expect(response.status).to.equal(200);
     expect(response.body).to.include({
-      _id: existingGameId,
+      _id: existingGameIdString,
       name: existingGameData.name,
     });
   });
@@ -124,6 +132,34 @@ describe('Integration Test for Game Controller', function() {
 
   // #############################################
   // update
+
+  it('should successfully update an existing game', async function() {
+    const insertTestingGameData = {
+      name: 'TESTING: Update Game',
+      version: "0.0.2",
+      description: [[new Date(), "A game to test updates"]]
+    }
+    const gameToUpdateIdString = await insertTestingGame(insertTestingGameData);
+    try {
+      const updateUri = `${baseUri}/${gameToUpdateIdString}`;
+      const updateData = {
+        name: 'TESTING: Updated Game Name',
+        description: [[new Date(), "A game to test updating"]]
+      };
+      const response = await request(app)
+        .put(updateUri)
+        .send(updateData); // Ensure to send the updateData in the request
+  
+      expect(response.status).to.equal(200);
+      expect(response.body._id).to.equal(gameToUpdateIdString);
+      expect(response.body.name).to.equal(insertTestingGameData.name);
+      expect(response.body.description).to.equal(insertTestingGameData.description);
+
+    } finally {
+      // Cleanup code to delete the testing game; this will run even if the test fails
+      await deleteTestingGame(gameToUpdateIdString);
+    }
+  });
 
   // #############################################
   // delete
