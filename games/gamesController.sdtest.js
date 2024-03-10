@@ -78,12 +78,12 @@ describe('Integration Test for Game Controller', function() {
 
   it('should disallow creating games with names that are too short, too long, the wrong type, or missing', async function() {
     const testCases = [
-      { name: '', expectedStatus: 400, adventureLog: 'Empty name' },
-      { name: 'A', expectedStatus: 400, adventureLog: 'Too short name' },
-      { name: 'x'.repeat(97), expectedStatus: 400, adventureLog: 'Too long name' },
-      { name: 123, expectedStatus: 400, adventureLog: 'Wrong type (number)' },
-      { name: null, expectedStatus: 400, adventureLog: 'Null name' },
-      { name: undefined, expectedStatus: 400, adventureLog: 'Missing name' }
+      { name: '', expectedStatus: 400, description: 'Empty name' },
+      { name: 'A', expectedStatus: 400, description: 'Too short name' },
+      { name: 'x'.repeat(97), expectedStatus: 400, description: 'Too long name' },
+      { name: 123, expectedStatus: 400, description: 'Wrong type (number)' },
+      { name: null, expectedStatus: 400, description: 'Null name' },
+      { name: undefined, expectedStatus: 400, description: 'Missing name' }
     ];
 
     for (const testCase of testCases) {
@@ -91,7 +91,7 @@ describe('Integration Test for Game Controller', function() {
         .post(baseUri)
         .send('name' in testCase ? { name: testCase.name } : {});
 
-      expect(response.status, `Test failed for case: ${testCase.adventureLog}`).to.equal(testCase.expectedStatus);
+      expect(response.status, `Test failed for case: ${testCase.description}`).to.equal(testCase.expectedStatus);
     }
   });
 
