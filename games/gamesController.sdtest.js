@@ -56,7 +56,7 @@ describe('Integration Test for Game Controller', function() {
       .send({ name: newGameName });
 
     expect(response.status).to.equal(201);
-    expect(response.body).to.have.property('insertedId');
+    expect(response.body,'has inserted id').to.have.property('insertedId');
 
     insertedGameIdString =`${response.body.insertedId}`;
 
@@ -66,9 +66,9 @@ describe('Integration Test for Game Controller', function() {
     // console.log('Inserted game:');
     // console.dir(insertedGame);
 
-    expect(insertedGame).to.include({
+    expect(insertedGame, 'reponse body has name and version').to.include({
       name: newGameName,
-      version: "0.0.2",
+      version: "0.0.3",
     });
     expect(insertedGame.adventureLog).to.be.an('array');
     expect(insertedGame.adventureLog[0]).to.be.an('array');
@@ -104,9 +104,10 @@ describe('Integration Test for Game Controller', function() {
       .get(readUri);
 
     expect(response.status).to.equal(200);
-    expect(response.body).to.include({
+    expect(response.body, 'reponse body has id and name and version').to.include({
       _id: existingGameIdString,
       name: existingGameData.name,
+      version: "0.0.3",
     });
   });
 
@@ -150,12 +151,12 @@ describe('Integration Test for Game Controller', function() {
         .send(updateData);
   
       expect(response.status).to.equal(200);
-      expect(response.body.message).to.include('success');
-      expect(response.body.updatedCount).to.equal(1);
+      expect(response.body.message, 'updated success message').to.include('success');
+      expect(response.body.updatedCount, 'updated count').to.equal(1);
 
       const dbClient = getDb();
       const updatedGame = await dbClient.collection("gamestate").findOne({ _id: new ObjectId(`${gameToUpdateIdString}`) });
-      expect(updatedGame.name).to.equal(updateData.name);
+      expect(updatedGame.name, 'updated game from the DB').to.equal(updateData.name);
 
     } finally {
       await deleteTestingGame(gameToUpdateIdString);
@@ -179,5 +180,29 @@ describe('Integration Test for Game Controller', function() {
   // #############################################
   // delete
 
+  it('should successfully delete an existing game by its ID', async function() {
+    const deleteUri = `${baseUri}/${existingGameIdString}`;
+    const response = await request(app)
+      .delete(deleteUri);
+
+    expect(response.status).to.equal(200);
+    expect(response.body.message, 'deleted success message').to.include('success');
+    expect(response.body.deletedCount, 'deleted count').to.equal(1);
+
+    const dbClient = getDb();
+    const updatedGame = await dbClient.collection("gamestate").findOne({ _id: new ObjectId(`${existingGameIdString}`) });
+    expect(updatedGame, 'deleted game from the DB').to.equal(null);
+  });
+
+  
+  it('should return 404 trying to delete a non-existent game ID', async function() {
+    const nonExistentId = new ObjectId();
+    const deleteUri = `${baseUri}/${nonExistentId}`;
+    const response = await request(app)
+      .delete(deleteUri);
+
+    expect(response.status).to.equal(404);
+    expect(response.text).to.include('not found');
+  });
 
 });

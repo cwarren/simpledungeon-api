@@ -31,15 +31,13 @@ export async function createGame(req, res, _next) {
             name: req.body.name,
             created_at: now,
             updated_at: now,
-            version: "0.0.2",
+            version: "0.0.3",
             adventureLog: [[now, "An adventurer heads out to seek their fortune..."]]
 
         };
 
-        // Assuming req.body contains the game state object
         const result = await gamestateCollection.insertOne(newGameData);
         
-        // Respond with the inserted document ID
         res.status(201).send({ insertedId: result.insertedId });
     } catch (e) {
         console.error('Failed to insert game state:', e);
@@ -47,7 +45,7 @@ export async function createGame(req, res, _next) {
     }
 }
 
-export async function updateGame(req, res, _next) {
+export async function updateGameById(req, res, _next) {
     try {
         const dbClient = getDb();
         const { gameId } = req.params;
@@ -80,7 +78,7 @@ export async function updateGame(req, res, _next) {
     }
 }
 
-export async function getGameById(req, res) {
+export async function getGameById(req, res, _next) {
     try {
         const dbClient = getDb();
         const { gameId } = req.params; 
@@ -94,5 +92,24 @@ export async function getGameById(req, res) {
     } catch(e) {
         console.error('Failed to fetch game:', e);
         res.status(500).send('Failed to fetch game: ' + e);
+    }
+}
+
+export async function deleteGameById(req, res, _next) {
+    try {
+        const dbClient = getDb();
+        const { gameId } = req.params; 
+
+        const deleteResult = await dbClient.collection("gamestate").deleteOne({ _id: new ObjectId(`${gameId}`) });
+
+        if (deleteResult.deletedCount === 0) {
+            res.status(404).send(`Game ${gameId} not found`);
+            return;
+        }
+
+        res.json({ message: "Game deleted successfully", deletedCount: deleteResult.deletedCount });
+    } catch(e) {
+        console.error('Failed to delete game:', e);
+        res.status(500).send('Failed to delete game: ' + e);
     }
 }
