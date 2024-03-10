@@ -32,7 +32,7 @@ export async function createGame(req, res, _next) {
             created_at: now,
             updated_at: now,
             version: "0.0.2",
-            description: [[now, "An adventurer heads out to seek their fortune..."]]
+            adventureLog: [[now, "An adventurer heads out to seek their fortune..."]]
 
         };
 
@@ -47,6 +47,39 @@ export async function createGame(req, res, _next) {
     }
 }
 
+export async function updateGame(req, res, _next) {
+    try {
+        const dbClient = getDb();
+        const { gameId } = req.params;
+        const updateData = {};
+
+        if (req.body.name) {
+            updateData.name = req.body.name;
+        }
+
+        if (Object.keys(updateData).length === 0) {
+            res.status(400).send('No update parameters provided.');
+            return;
+        }
+
+        const updateResult = await dbClient.collection("gamestate").updateOne(
+            { _id: new ObjectId(`${gameId}`) }, 
+            { $set: updateData }
+        );
+
+        if (updateResult.matchedCount === 0) {
+            res.status(404).send(`Game ${gameId} not found`);
+            return;
+        }
+
+        res.json({ message: "Game updated successfully", updatedCount: updateResult.modifiedCount });
+
+    } catch (e) {
+        console.error('Failed to update game state:', e);
+        res.status(500).send('Failed to insert new game state: ' + e);
+    }
+}
+
 export async function getGameById(req, res) {
     try {
         const dbClient = getDb();
@@ -56,7 +89,7 @@ export async function getGameById(req, res) {
         if (game) {
             res.json(game);
         } else {
-            res.status(404).send('Game not found');
+            res.status(404).send(`Game ${gameId} not found`);
         }
     } catch(e) {
         console.error('Failed to fetch game:', e);

@@ -32,8 +32,8 @@ describe('Integration Test for Game Controller', function() {
 
   const existingGameData = {
     name: 'TESTING: Existing Game ID',
-    version: "0.0.2",
-    description: [[new Date(), "A game to test"]]
+    version: "0.0.3",
+    adventureLog: [[new Date(), "A game to test"]]
   };
 
   before(async function() {
@@ -70,20 +70,20 @@ describe('Integration Test for Game Controller', function() {
       name: newGameName,
       version: "0.0.2",
     });
-    expect(insertedGame.description).to.be.an('array');
-    expect(insertedGame.description[0]).to.be.an('array');
-    expect(insertedGame.description[0].length).to.equal(2);
+    expect(insertedGame.adventureLog).to.be.an('array');
+    expect(insertedGame.adventureLog[0]).to.be.an('array');
+    expect(insertedGame.adventureLog[0].length).to.equal(2);
 
   });
 
-  it('should disallow names that are too short, too long, the wrong type, or missing', async function() {
+  it('should disallow creating games with names that are too short, too long, the wrong type, or missing', async function() {
     const testCases = [
-      { name: '', expectedStatus: 400, description: 'Empty name' },
-      { name: 'A', expectedStatus: 400, description: 'Too short name' },
-      { name: 'x'.repeat(97), expectedStatus: 400, description: 'Too long name' },
-      { name: 123, expectedStatus: 400, description: 'Wrong type (number)' },
-      { name: null, expectedStatus: 400, description: 'Null name' },
-      { name: undefined, expectedStatus: 400, description: 'Missing name' }
+      { name: '', expectedStatus: 400, adventureLog: 'Empty name' },
+      { name: 'A', expectedStatus: 400, adventureLog: 'Too short name' },
+      { name: 'x'.repeat(97), expectedStatus: 400, adventureLog: 'Too long name' },
+      { name: 123, expectedStatus: 400, adventureLog: 'Wrong type (number)' },
+      { name: null, expectedStatus: 400, adventureLog: 'Null name' },
+      { name: undefined, expectedStatus: 400, adventureLog: 'Missing name' }
     ];
 
     for (const testCase of testCases) {
@@ -91,7 +91,7 @@ describe('Integration Test for Game Controller', function() {
         .post(baseUri)
         .send('name' in testCase ? { name: testCase.name } : {});
 
-      expect(response.status, `Test failed for case: ${testCase.description}`).to.equal(testCase.expectedStatus);
+      expect(response.status, `Test failed for case: ${testCase.adventureLog}`).to.equal(testCase.expectedStatus);
     }
   });
 
@@ -110,14 +110,14 @@ describe('Integration Test for Game Controller', function() {
     });
   });
 
-  it('should return 404 for a non-existent game ID', async function() {
+  it('should return 404 trying to read a non-existent game ID', async function() {
     const nonExistentId = new ObjectId(); // Generate a new ObjectId that doesn't exist in the database
     const readUri = `${baseUri}/${nonExistentId.toString()}`;
     const response = await request(app)
       .get(readUri);
 
     expect(response.status).to.equal(404);
-    expect(response.text).to.equal('Game not found');
+    expect(response.text).to.include('not found');
   });
 
   it('should return 500 for an invalid game ID format', async function() {
@@ -134,31 +134,46 @@ describe('Integration Test for Game Controller', function() {
   // update
 
   it('should successfully update an existing game', async function() {
-    const insertTestingGameData = {
+    const updateTestingGameData = {
       name: 'TESTING: Update Game',
-      version: "0.0.2",
-      description: [[new Date(), "A game to test updates"]]
+      version: "0.0.3",
+      adventureLog: [[new Date(), "A game to test updates"]]
     }
-    const gameToUpdateIdString = await insertTestingGame(insertTestingGameData);
+    const gameToUpdateIdString = await insertTestingGame(updateTestingGameData);
     try {
       const updateUri = `${baseUri}/${gameToUpdateIdString}`;
       const updateData = {
         name: 'TESTING: Updated Game Name',
-        description: [[new Date(), "A game to test updating"]]
       };
       const response = await request(app)
         .put(updateUri)
-        .send(updateData); // Ensure to send the updateData in the request
+        .send(updateData);
   
       expect(response.status).to.equal(200);
-      expect(response.body._id).to.equal(gameToUpdateIdString);
-      expect(response.body.name).to.equal(insertTestingGameData.name);
-      expect(response.body.description).to.equal(insertTestingGameData.description);
+      expect(response.body.message).to.include('success');
+      expect(response.body.updatedCount).to.equal(1);
+
+      const dbClient = getDb();
+      const updatedGame = await dbClient.collection("gamestate").findOne({ _id: new ObjectId(`${gameToUpdateIdString}`) });
+      expect(updatedGame.name).to.equal(updateData.name);
 
     } finally {
-      // Cleanup code to delete the testing game; this will run even if the test fails
       await deleteTestingGame(gameToUpdateIdString);
     }
+  });
+
+  it('should return 404 trying to update a non-existent game ID', async function() {
+    const nonExistentId = new ObjectId();
+    const updateUri = `${baseUri}/${nonExistentId}`;
+    const updateData = {
+      name: 'TESTING: Updated Game Name',
+    };
+    const response = await request(app)
+      .put(updateUri)
+      .send(updateData);
+
+    expect(response.status).to.equal(404);
+    expect(response.text).to.include('not found');
   });
 
   // #############################################
