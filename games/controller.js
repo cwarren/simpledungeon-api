@@ -1,10 +1,12 @@
 import { getDb }  from '../dbClient.js';
 import { ObjectId } from 'mongodb';
 
+export const GAME_COLLECTION = 'gamestate';
+
 export async function getGames(req, res, _next) {
     try {
         const dbClient = getDb();
-        const gameStateCursor = await dbClient.collection("gamestate").find({});
+        const gameStateCursor = await dbClient.collection(GAME_COLLECTION).find({});
         res.send(JSON.stringify(await gameStateCursor.toArray()));        
     } catch(e) {
         res.status(500).send('Failed to fetch games:'+ e);
@@ -24,7 +26,7 @@ export async function createGame(req, res, _next) {
 
     try {
         const dbClient = getDb();
-        const gamestateCollection = dbClient.collection("gamestate");
+        const gamestateCollection = dbClient.collection(GAME_COLLECTION);
         
         const now = new Date();
         const newGameData = {
@@ -60,7 +62,7 @@ export async function updateGameById(req, res, _next) {
             return;
         }
 
-        const updateResult = await dbClient.collection("gamestate").updateOne(
+        const updateResult = await dbClient.collection(GAME_COLLECTION).updateOne(
             { _id: new ObjectId(`${gameId}`) }, 
             { $set: updateData }
         );
@@ -82,7 +84,7 @@ export async function getGameById(req, res, _next) {
     try {
         const dbClient = getDb();
         const { gameId } = req.params; 
-        const game = await dbClient.collection("gamestate").findOne({ _id: new ObjectId(`${gameId}`) });
+        const game = await dbClient.collection(GAME_COLLECTION).findOne({ _id: new ObjectId(`${gameId}`) });
 
         if (game) {
             res.json(game);
@@ -100,7 +102,7 @@ export async function deleteGameById(req, res, _next) {
         const dbClient = getDb();
         const { gameId } = req.params; 
 
-        const deleteResult = await dbClient.collection("gamestate").deleteOne({ _id: new ObjectId(`${gameId}`) });
+        const deleteResult = await dbClient.collection(GAME_COLLECTION).deleteOne({ _id: new ObjectId(`${gameId}`) });
 
         if (deleteResult.deletedCount === 0) {
             res.status(404).send(`Game ${gameId} not found`);

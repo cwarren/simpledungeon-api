@@ -5,12 +5,14 @@ import { ObjectId } from 'mongodb';
 import { app } from '../app.js';
 import { getDb, dbClose } from '../dbClient.js';
 
+import {GAME_COLLECTION} from './controller.js';
+
 describe('Integration Test for Game Controller', function() {
   const baseUri = '/games';
 
   async function insertTestingGame(testingGameData) {
     const dbClient = getDb();
-    const result = await dbClient.collection("gamestate").insertOne(testingGameData);
+    const result = await dbClient.collection(GAME_COLLECTION).insertOne(testingGameData);
     return result.insertedId.toString();
   }
 
@@ -18,7 +20,7 @@ describe('Integration Test for Game Controller', function() {
   async function deleteTestingGame(testingGameIdString) {
     if (testingGameIdString) {
       const dbClient = getDb();
-      const result = await dbClient.collection("gamestate").deleteOne({"_id": new ObjectId(`${testingGameIdString}`)});
+      const result = await dbClient.collection(GAME_COLLECTION).deleteOne({"_id": new ObjectId(`${testingGameIdString}`)});
       console.log('delete result:');
       console.dir(result);
       return result;
@@ -61,7 +63,7 @@ describe('Integration Test for Game Controller', function() {
     insertedGameIdString =`${response.body.insertedId}`;
 
     const dbClient = getDb();
-    const insertedGame = await dbClient.collection("gamestate").findOne({ _id: new ObjectId(insertedGameIdString) });
+    const insertedGame = await dbClient.collection(GAME_COLLECTION).findOne({ _id: new ObjectId(insertedGameIdString) });
 
     // console.log('Inserted game:');
     // console.dir(insertedGame);
@@ -155,7 +157,7 @@ describe('Integration Test for Game Controller', function() {
       expect(response.body.updatedCount, 'updated count').to.equal(1);
 
       const dbClient = getDb();
-      const updatedGame = await dbClient.collection("gamestate").findOne({ _id: new ObjectId(`${gameToUpdateIdString}`) });
+      const updatedGame = await dbClient.collection(GAME_COLLECTION).findOne({ _id: new ObjectId(`${gameToUpdateIdString}`) });
       expect(updatedGame.name, 'updated game from the DB').to.equal(updateData.name);
 
     } finally {
@@ -190,7 +192,7 @@ describe('Integration Test for Game Controller', function() {
     expect(response.body.deletedCount, 'deleted count').to.equal(1);
 
     const dbClient = getDb();
-    const updatedGame = await dbClient.collection("gamestate").findOne({ _id: new ObjectId(`${existingGameIdString}`) });
+    const updatedGame = await dbClient.collection(GAME_COLLECTION).findOne({ _id: new ObjectId(`${existingGameIdString}`) });
     expect(updatedGame, 'deleted game from the DB').to.equal(null);
   });
 
