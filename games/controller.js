@@ -1,7 +1,7 @@
 import { getDb }  from '../dbClient.js';
 import { ObjectId } from 'mongodb';
 
-export const GAME_COLLECTION = 'gamestate';
+export const GAME_COLLECTION = 'games';
 
 export async function getGames(req, res, _next) {
     try {
