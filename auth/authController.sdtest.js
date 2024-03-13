@@ -24,6 +24,7 @@ AWS.config.update({
 const cognito = new AWS.CognitoIdentityServiceProvider();
 
 const testExistingUserEmail = process.env.TEST_USER_EXISTING_EMAIL;
+const testExistingUserId = process.env.TEST_USER_EXISTING_ID;
 const testExistingUserPassword = process.env.TEST_USER_EXISTING_PASSWORD;
 const testNewUserEmail = process.env.TEST_USER_NEW_EMAIL;
 const testNewUserPassword = process.env.TEST_USER_NEW_PASSWORD;
@@ -51,11 +52,18 @@ describe('Integration Test for Auth Controller', function() {
     // #############################################
     // util
     it('should get an existing user by id', async function() {
-        assert.fail('This test has not been implemented');
+        const userData = await getUserByIdOrEmail(testExistingUserId, cognito);
+        expect(userData.Username).to.equal(testExistingUserId);
     });
 
     it('should get an existing user by email', async function() {
-        assert.fail('This test has not been implemented');
+        const userData = await getUserByIdOrEmail(testExistingUserEmail, cognito);
+        expect(userData.Username).to.equal(testExistingUserId);
+    });
+
+    it('should get an empty result for a non-existing user', async function() {
+        const userData = await getUserByIdOrEmail('blahblahblah', cognito);
+        expect(Object.keys(userData)).to.be.empty;
     });
 
 
