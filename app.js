@@ -3,6 +3,7 @@ import cors from "cors";
 import bodyParser from "body-parser";
 
 import { gamesRouter } from "./games/router.js";
+import { authRouter } from "./auth/router.js";
 
 import { dbConnect, dbClose, getDb }  from './dbClient.js';
 
@@ -15,6 +16,7 @@ app.use(bodyParser.json());
 app.use(cors());
 
 //-------------------------
+// simple status endpoints
 
 app.get('/', (req, res) => {
   res.send('simpledungeon-api');
@@ -36,8 +38,10 @@ app.get('/alivedb', async (req, res) => {
 });
 
 //-------------------------
+// actual API endpoints
 
 app.use(`/games`, gamesRouter);
+app.use(`/auth`, authRouter);
 
 //-------------------------
 // last layer of error handling
