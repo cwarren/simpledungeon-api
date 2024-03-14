@@ -2,6 +2,7 @@ import { ObjectId } from 'mongodb';
 import AWS from 'aws-sdk';
 import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
   
 import { app } from '../app.js';
 import { getDb, dbClose } from '../dbClient.js';
@@ -45,11 +46,17 @@ export async function registerUser(req, res, _next) {
 export async function login(req, res, _next) {
     const { email, password } = req.body;
 
+    const secretHash = crypto.createHmac('sha256', process.env.COGNITO_APP_CLIENT_SECRET)
+                          .update(email + process.env.COGNITO_APP_CLIENT_ID)
+                          .digest('base64');
+
     const params = {
         AuthFlow: 'USER_PASSWORD_AUTH',
-        ClientId: 'YOUR_COGNITO_USER_POOL_CLIENT_ID',
+        ClientId: process.env.COGNITO_APP_CLIENT_ID,
         AuthParameters: {
-            USERNAME: email
+            USERNAME: email,
+            PASSWORD: password,
+            SECRET_HASH: secretHash,
         }
     };
 
@@ -61,6 +68,26 @@ export async function login(req, res, _next) {
         res.status(401).send({ message: 'Invalid email or password' });
     }
 }
+
+// export async function login(req, res, _next) {
+//     const { email, password } = req.body;
+
+//     const params = {
+//         AuthFlow: 'USER_PASSWORD_AUTH',
+//         ClientId: process.env.COGNITO_APP_CLIENT_ID,
+//         AuthParameters: {
+//             USERNAME: email
+//         }
+//     };
+
+//     try {
+//         const data = await cognito.initiateAuth(params).promise();
+//         res.status(200).send({ accessToken: data.AuthenticationResult.AccessToken });
+//     } catch (error) {
+//         console.error('Error logging in user:', error);
+//         res.status(401).send({ message: 'Invalid email or password' });
+//     }
+// }
 
 export async function logout(req, res, _next) {
 }
