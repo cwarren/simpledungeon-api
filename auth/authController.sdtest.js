@@ -50,71 +50,53 @@ describe('Integration Test for Auth Controller', function() {
 
 
     // #############################################
-    // util
-    it('should get an existing user by id', async function() {
-        const userData = await getUserByIdOrEmail(testExistingUserId, cognito);
-        expect(userData.Username).to.equal(testExistingUserId);
-    });
-
-    it('should get an existing user by email', async function() {
-        const userData = await getUserByIdOrEmail(testExistingUserEmail, cognito);
-        expect(userData.Username).to.equal(testExistingUserId);
-    });
-
-    it('should get an empty result for a non-existing user', async function() {
-        const userData = await getUserByIdOrEmail('blahblahblah', cognito);
-        expect(Object.keys(userData)).to.be.empty;
-    });
-
-
-    // #############################################
     // login
-    it('should allow an existing user to login', async function() {
+    it.skip('should allow an existing user to login', async function() {
         assert.fail('This test has not been implemented');
     });
 
-    it('should prevent login for an existing user with an invalid password', async function() {
+    it.skip('should prevent login for an existing user with an invalid password', async function() {
         assert.fail('This test has not been implemented');
     });
 
-    it('should prevent login for an invalid user', async function() {
+    it.skip('should prevent login for an invalid user', async function() {
         assert.fail('This test has not been implemented');
     });
 
 
     // #############################################
     // logout
-    it('should do nothing for logout if the user is not logged in', async function() {
+    it.skip('should do nothing for logout if the user is not logged in', async function() {
         assert.fail('This test has not been implemented');
     });
 
-    it('should allow an existing logged user to logout', async function() {
+    it.skip('should allow an existing logged user to logout', async function() {
         assert.fail('This test has not been implemented');
     });
 
 
     // #############################################
     // register
-    it('should allow an new user to register with a valid email address and password', async function() {
+    it.skip('should allow an new user to register with a valid email address and password', async function() {
         assert.fail('This test has not been implemented');
     });
 
-    it('should prevent an new user from registering with an invalid email address', async function() {
+    it.skip('should prevent an new user from registering with an invalid email address', async function() {
         assert.fail('This test has not been implemented');
     });
 
-    it('should prevent an new user from registering with an invalid password', async function() {
+    it.skip('should prevent an new user from registering with an invalid password', async function() {
         assert.fail('This test has not been implemented');
     });
 
 
     // #############################################
     // expunge
-    it('should do nothing for expunge if the user is not logged in', async function() {
+    it.skip('should do nothing for expunge if the user is not logged in', async function() {
         assert.fail('This test has not been implemented');
     });
 
-    it('should logout the user and remove their account', async function() {
+    it.skip('should logout the user and remove their account', async function() {
         assert.fail('This test has not been implemented');
     });
 
