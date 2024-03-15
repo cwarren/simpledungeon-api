@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import { CognitoIdentityProviderClient, AdminSetUserPasswordCommand } from "@aws-sdk/client-cognito-identity-provider";
   
 import { app } from '../app.js';
+import { verifyJWT } from './middleware.js';
 import { AUTH_MSG_NEW_PASSWORD_REQUIRED, AUTH_MSG_INVALID_CREDENTIALS } from "./controller.js";
 
 if(process.env.NODE_ENV === 'test') {
@@ -51,6 +52,9 @@ async function resetNeedsNewPwUserState() {
 describe('Integration Test for Auth Controller', function() {
     const baseUri = '/auth';
 
+    const protectedURI = '/auth/protectedTest';
+    const authSuccessMessage = 'If you see this, you are authenticated';
+
     const existingUserInfo = {
         email: testExistingUserEmail,
         password: testExistingUserPassword,
@@ -66,6 +70,9 @@ describe('Integration Test for Auth Controller', function() {
     // #############################################
 
     before(async function() {
+        app.get(protectedURI, verifyJWT, (req, res) => {
+            res.json({ message: authSuccessMessage });
+        });
     });
 
     after(async function() {
@@ -85,6 +92,17 @@ describe('Integration Test for Auth Controller', function() {
         expect(response.body.accessToken).to.exist;
         expect(response.body.idToken).to.exist;
         expect(response.body.refreshToken).to.exist;
+    });
+
+    it('should allow access to protected endpoint once logged in', async function() {
+        this.timeout(10000); // Increase timeout to 10 seconds for this test, since actual auth may take longer than the default 2 seconds mocha uses
+        const loginResponse = await request(app)
+            .post(`${baseUri}/login`)
+            .send(existingUserInfo);
+
+        const protectedResponse = await request(app).get(protectedURI).set('Authorization', `Bearer ${loginResponse.body.accessToken}`);
+        expect(protectedResponse.status).to.equal(200);
+        expect(protectedResponse.body.message).to.equal(authSuccessMessage);      
     });
 
     it('should require a new password for NEW_PASSWORD_REQUIRED challenge', async () => {
