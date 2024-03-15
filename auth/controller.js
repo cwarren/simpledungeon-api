@@ -8,9 +8,8 @@ import { getDb, dbClose } from '../dbClient.js';
 
 import { getUserByIdOrEmail } from './utils.js';
 
+import { CognitoIdentityProviderClient, InitiateAuthCommand, RespondToAuthChallengeCommand } from "@aws-sdk/client-cognito-identity-provider";
 import { createHmac } from 'crypto';
-import { CognitoIdentityProviderClient, InitiateAuthCommand } from "@aws-sdk/client-cognito-identity-provider";
-
 
 if(process.env.NODE_ENV === 'test') {
     dotenv.config({ path: '.env.test' });
@@ -24,6 +23,8 @@ AWS.config.update({
     region: process.env.AWS_REGION
   });
 const cognito = new AWS.CognitoIdentityServiceProvider();
+
+// ###################################
 
 export async function registerUser(req, res, _next) {
     const { email, password } = req.body;
@@ -46,10 +47,11 @@ export async function registerUser(req, res, _next) {
     }
 }
 
-export async function login(req, res, _next) {
-    const { email, password } = req.body;
-    const clientSecret = process.env.COGNITO_APP_CLIENT_SECRET; // Make sure this is set in your environment variables
+// ###################################
 
+export async function login(req, res, _next) {
+    const { email, password, newPassword } = req.body; // Assume `newPassword` is provided if needed
+    const clientSecret = process.env.COGNITO_APP_CLIENT_SECRET;
     const secretHash = createHmac('SHA256', clientSecret)
                           .update(email + process.env.COGNITO_APP_CLIENT_ID)
                           .digest('base64');
@@ -58,7 +60,7 @@ export async function login(req, res, _next) {
         region: process.env.AWS_REGION,
     });
 
-    const command = new InitiateAuthCommand({
+    const authCommand = new InitiateAuthCommand({
         AuthFlow: 'USER_PASSWORD_AUTH',
         ClientId: process.env.COGNITO_APP_CLIENT_ID,
         AuthParameters: {
@@ -69,21 +71,50 @@ export async function login(req, res, _next) {
     });
 
     try {
-        const loginCommandResult = await client.send(command);
-        const { AuthenticationResult } = loginCommandResult;
-        res.status(200).send({
-            accessToken: AuthenticationResult.AccessToken,
-            idToken: AuthenticationResult.IdToken,
-            refreshToken: AuthenticationResult.RefreshToken,
-        });
+        let authResult = await client.send(authCommand);
+
+        if (authResult.ChallengeName === 'NEW_PASSWORD_REQUIRED') {
+            if (!newPassword) {
+                return res.status(400).send({ message: 'New password required.' });
+            }
+
+            const challengeResponseCommand = new RespondToAuthChallengeCommand({
+                ChallengeName: 'NEW_PASSWORD_REQUIRED',
+                ClientId: process.env.COGNITO_APP_CLIENT_ID,
+                Session: authResult.Session,
+                ChallengeResponses: {
+                    USERNAME: email,
+                    NEW_PASSWORD: newPassword,
+                    SECRET_HASH: secretHash,
+                },
+            });
+
+            authResult = await client.send(challengeResponseCommand);
+        }
+
+        // Continue with the authentication process...
+        if (authResult.AuthenticationResult) {
+            res.status(200).send({
+                accessToken: authResult.AuthenticationResult.AccessToken,
+                idToken: authResult.AuthenticationResult.IdToken,
+                refreshToken: authResult.AuthenticationResult.RefreshToken,
+            });
+        } else {
+            console.error('No authentication result returned');
+            res.status(401).send({ message: 'Login failed' });
+        }
     } catch (error) {
         console.error('Error logging in user:', error);
         res.status(401).send({ message: 'Invalid email or password' });
     }
 }
 
+// ###################################
+
 export async function logout(req, res, _next) {
 }
+
+// ###################################
 
 export async function removeUser(req, res, _next) {
 }
