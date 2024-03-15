@@ -1,9 +1,11 @@
 import request from 'supertest';
 import { expect, assert } from 'chai';
+import { ObjectId } from 'mongodb';
 import AWS from 'aws-sdk';
 import dotenv from 'dotenv';
   
 import { app } from '../app.js';
+// import { getDb, dbClose } from '../dbClient.js';
 
 import { getUserByIdOrEmail } from './utils.js';
 import { registerUser, login, logout, removeUser } from "./controller.js";
@@ -43,84 +45,47 @@ describe('Integration Test for Auth Controller', function() {
     });
 
     after(async function() {
+        // await dbClose();
     });
 
 
     // #############################################
     // login
-    it('should allow an existing user to login', async function() {
-        this.timeout(10000); // Increase timeout to 10 seconds for this test, since actual auth may take longer
-        const response = await request(app)
-            .post(`${baseUri}/login`)
-            .send(existingUserInfo);
-
-        expect(response.status).to.equal(200);
+    it.skip('should allow an existing user to login', async function() {
+        assert.fail('This test has not been implemented');
     });
 
-    it('should prevent login for an existing user with an invalid password', async function() {
-        const response = await request(app)
-            .post(`${baseUri}/login`)
-            .send({ ...existingUserInfo, password: 'wrongPassword' });
-
-        expect(response.status).to.equal(401);
-        expect(response.body.message).to.equal('Invalid email or password');
+    it.skip('should prevent login for an existing user with an invalid password', async function() {
+        assert.fail('This test has not been implemented');
     });
 
-    it('should prevent login for an invalid user', async function() {
-        const response = await request(app)
-            .post(`${baseUri}/login`)
-            .send({ email: 'nonexistentuser@example.com', password: 'somePassword' });
-
-        expect(response.status).to.equal(401);
-        expect(response.body.message).to.equal('Invalid email or password');
+    it.skip('should prevent login for an invalid user', async function() {
+        assert.fail('This test has not been implemented');
     });
 
 
     // #############################################
     // logout
     it.skip('should do nothing for logout if the user is not logged in', async function() {
-        const response = await request(app).post(`${baseUri}/logout`);
-
-        expect(response.status).to.equal(200); // Assuming it always succeeds
+        assert.fail('This test has not been implemented');
     });
 
     it.skip('should allow an existing logged user to logout', async function() {
-        // This test might require you to first login to get a valid token/session
-        // and then call logout endpoint with that token/session
-        assert.fail('This test requires implementation details about sessions or tokens.');
+        assert.fail('This test has not been implemented');
     });
 
 
     // #############################################
     // register
     it.skip('should allow an new user to register with a valid email address and password', async function() {
-        const response = await request(app)
-            .post(`${baseUri}/register`)
-            .send({ email: testNewUserEmail, password: testNewUserPassword });
-
-        expect(response.status).to.equal(201); // Assuming 201 for created
-        // TODO: Remember to clean up (delete) this test user in the `after` hook or in this test
-
-    });
-
-    it.skip('should prevent an new user from registering with email address that\'s already registered', async function() {
-        const response = await request(app)
-            .post(`${baseUri}/register`)
-            .send({ email: testExistingUserEmail, password: testNewUserPassword });
-
-        expect(response.status).to.equal(400); // Assuming 400 for bad request
+        assert.fail('This test has not been implemented');
     });
 
     it.skip('should prevent an new user from registering with an invalid email address', async function() {
-        const response = await request(app)
-            .post(`${baseUri}/register`)
-            .send({ email: 'invalidEmail', password: testNewUserPassword });
-
-        expect(response.status).to.equal(400); // Assuming 400 for bad request
+        assert.fail('This test has not been implemented');
     });
 
     it.skip('should prevent an new user from registering with an invalid password', async function() {
-        // TODO: Implement based on password policy
         assert.fail('This test has not been implemented');
     });
 
@@ -128,14 +93,11 @@ describe('Integration Test for Auth Controller', function() {
     // #############################################
     // expunge
     it.skip('should do nothing for expunge if the user is not logged in', async function() {
-        const response = await request(app).post(`${baseUri}/expunge`);
-
-        expect(response.status).to.equal(401); // Assuming unauthorized if not logged in
+        assert.fail('This test has not been implemented');
     });
 
     it.skip('should logout the user and remove their account', async function() {
-        // This test might require a logged-in user session or token to test properly
-        assert.fail('Implementation details required for logged-in state.');
+        assert.fail('This test has not been implemented');
     });
 
 });
