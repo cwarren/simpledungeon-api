@@ -1,13 +1,5 @@
-import { ObjectId } from 'mongodb';
-import AWS from 'aws-sdk';
 import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
-  
-import { app } from '../app.js';
-import { getDb, dbClose } from '../dbClient.js';
-
-import { getUserByIdOrEmail } from './utils.js';
-
 import { CognitoIdentityProviderClient, InitiateAuthCommand, RespondToAuthChallengeCommand } from "@aws-sdk/client-cognito-identity-provider";
 import { createHmac } from 'crypto';
 
@@ -17,48 +9,76 @@ if(process.env.NODE_ENV === 'test') {
     dotenv.config();
 }
 
-AWS.config.update({
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-    region: process.env.AWS_REGION
-  });
-const cognito = new AWS.CognitoIdentityServiceProvider();
+const cognitoClient = new CognitoIdentityProviderClient({
+    region: process.env.AWS_REGION,
+});
 
 // ###################################
+// supporting functions
 
-export async function registerUser(req, res, _next) {
-    const { email, password } = req.body;
-
-    const params = {
-        Username: email,
-        Password: password,
-        UserPoolId: process.env.COGNITO_USER_POOL_ID,
-        UserAttributes: [
-            { Name: 'email', Value: email }
-        ]
-    };
-
-    try {
-        await cognito.signUp(params).promise();
-        res.status(201).send({ message: 'User created successfully!' });
-    } catch (error) {
-        console.error('Error creating user:', error);
-        res.status(500).send({ message: 'Error creating user' });
-    }
+function getSecretHash(email, clientId) {
+    const clientSecret = process.env.COGNITO_APP_CLIENT_SECRET;
+    const secretHash = createHmac('SHA256', clientSecret)
+                          .update(email + clientId)
+                          .digest('base64');
+    return secretHash;
 }
 
 // ###################################
+// registration / sign up
+
+export async function registerUser(req, res, _next) {
+    const { email, password } = req.body;
+    res.status(500).send({ message: 'User regsitration is not yet supported' });
+    // const params = {
+    //     Username: email,
+    //     Password: password,
+    //     UserPoolId: process.env.COGNITO_USER_POOL_ID,
+    //     UserAttributes: [
+    //         { Name: 'email', Value: email }
+    //     ]
+    // };
+
+    // try {
+    //     await cognito.signUp(params).promise();
+    //     res.status(201).send({ message: 'User created successfully!' });
+    // } catch (error) {
+    //     console.error('Error creating user:', error);
+    //     res.status(500).send({ message: 'Error creating user' });
+    // }
+}
+
+// ###################################
+// login
+
+export const AUTH_MSG_NEW_PASSWORD_REQUIRED = 'New password required.';
+export const AUTH_MSG_INVALID_CREDENTIALS = 'Invalid email or password';
+
+async function handleChallengeNewPasswordRequired(authResult, email, newPassword, secretHash) {
+    if (authResult.ChallengeName === 'NEW_PASSWORD_REQUIRED') {
+        if (!newPassword) {
+            return AUTH_MSG_NEW_PASSWORD_REQUIRED;
+        }
+
+        const challengeResponseCommand = new RespondToAuthChallengeCommand({
+            ChallengeName: 'NEW_PASSWORD_REQUIRED',
+            ClientId: process.env.COGNITO_APP_CLIENT_ID,
+            Session: authResult.Session,
+            ChallengeResponses: {
+                USERNAME: email,
+                NEW_PASSWORD: newPassword,
+                SECRET_HASH: secretHash,
+            },
+        });
+
+        authResult = await cognitoClient.send(challengeResponseCommand);
+    }
+    return authResult;
+}
 
 export async function login(req, res, _next) {
     const { email, password, newPassword } = req.body; // Assume `newPassword` is provided if needed
-    const clientSecret = process.env.COGNITO_APP_CLIENT_SECRET;
-    const secretHash = createHmac('SHA256', clientSecret)
-                          .update(email + process.env.COGNITO_APP_CLIENT_ID)
-                          .digest('base64');
-
-    const client = new CognitoIdentityProviderClient({
-        region: process.env.AWS_REGION,
-    });
+    const secretHash = getSecretHash(email, process.env.COGNITO_APP_CLIENT_ID);
 
     const authCommand = new InitiateAuthCommand({
         AuthFlow: 'USER_PASSWORD_AUTH',
@@ -71,28 +91,13 @@ export async function login(req, res, _next) {
     });
 
     try {
-        let authResult = await client.send(authCommand);
-
-        if (authResult.ChallengeName === 'NEW_PASSWORD_REQUIRED') {
-            if (!newPassword) {
-                return res.status(400).send({ message: 'New password required.' });
-            }
-
-            const challengeResponseCommand = new RespondToAuthChallengeCommand({
-                ChallengeName: 'NEW_PASSWORD_REQUIRED',
-                ClientId: process.env.COGNITO_APP_CLIENT_ID,
-                Session: authResult.Session,
-                ChallengeResponses: {
-                    USERNAME: email,
-                    NEW_PASSWORD: newPassword,
-                    SECRET_HASH: secretHash,
-                },
-            });
-
-            authResult = await client.send(challengeResponseCommand);
+        let authResult = await cognitoClient.send(authCommand);
+        
+        authResult = await handleChallengeNewPasswordRequired(authResult, email, newPassword, secretHash);
+        if (authResult === AUTH_MSG_NEW_PASSWORD_REQUIRED) {
+            return res.status(400).send({ message: AUTH_MSG_NEW_PASSWORD_REQUIRED });
         }
 
-        // Continue with the authentication process...
         if (authResult.AuthenticationResult) {
             res.status(200).send({
                 accessToken: authResult.AuthenticationResult.AccessToken,
@@ -105,16 +110,18 @@ export async function login(req, res, _next) {
         }
     } catch (error) {
         console.error('Error logging in user:', error);
-        res.status(401).send({ message: 'Invalid email or password' });
+        res.status(401).send({ message: AUTH_MSG_INVALID_CREDENTIALS });
     }
 }
 
 // ###################################
+// logout
 
 export async function logout(req, res, _next) {
 }
 
 // ###################################
+// remove user / expunge
 
 export async function removeUser(req, res, _next) {
 }

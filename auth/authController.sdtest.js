@@ -1,31 +1,16 @@
 import request from 'supertest';
 import { expect, assert } from 'chai';
-// import { ObjectId } from 'mongodb';
-// import AWS from 'aws-sdk';
 import dotenv from 'dotenv';
-import { CognitoIdentityProviderClient, AdminSetUserPasswordCommand, AdminUpdateUserAttributesCommand } from "@aws-sdk/client-cognito-identity-provider";
+import { CognitoIdentityProviderClient, AdminSetUserPasswordCommand } from "@aws-sdk/client-cognito-identity-provider";
   
 import { app } from '../app.js';
-// import { getDb, dbClose } from '../dbClient.js';
-
-// import { getUserByIdOrEmail } from './utils.js';
-// import { registerUser, login, logout, removeUser } from "./controller.js";
-
-
+import { AUTH_MSG_NEW_PASSWORD_REQUIRED, AUTH_MSG_INVALID_CREDENTIALS } from "./controller.js";
 
 if(process.env.NODE_ENV === 'test') {
     dotenv.config({ path: '.env.test' });
 } else {
     dotenv.config();
 }
-
-// AWS.config.update({
-//     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-//     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-//     region: process.env.AWS_REGION
-//   });
-// const cognito = new AWS.CognitoIdentityServiceProvider();
-
 
 const userPoolId = process.env.COGNITO_USER_POOL_ID;
 const cognitoClient = new CognitoIdentityProviderClient({
@@ -91,15 +76,15 @@ describe('Integration Test for Auth Controller', function() {
     // #############################################
     // login
     it('should login successfully with correct credentials', async function() {
-        this.timeout(10000); // Increase timeout to 10 seconds for this test, since actual auth may take longer
+        this.timeout(10000); // Increase timeout to 10 seconds for this test, since actual auth may take longer than the default 2 seconds mocha uses
         const response = await request(app)
             .post(`${baseUri}/login`)
             .send(existingUserInfo);
 
-            expect(response.status).to.equal(200);
-            expect(response.body.accessToken).to.exist;
-            expect(response.body.idToken).to.exist;
-            expect(response.body.refreshToken).to.exist;
+        expect(response.status).to.equal(200);
+        expect(response.body.accessToken).to.exist;
+        expect(response.body.idToken).to.exist;
+        expect(response.body.refreshToken).to.exist;
     });
 
     it('should require a new password for NEW_PASSWORD_REQUIRED challenge', async () => {
@@ -110,10 +95,11 @@ describe('Integration Test for Auth Controller', function() {
           .send(needsNewPwUserInfo);
       
         expect(response.status).to.equal(400);
-        expect(response.body.message).to.equal('New password required.');
+        expect(response.body.message).to.equal(AUTH_MSG_NEW_PASSWORD_REQUIRED);
     });
 
     it('should handle NEW_PASSWORD_REQUIRED challenge', async () => {
+        this.timeout(10000); // Increase timeout to 10 seconds for this test, since actual auth may take longer than the default 2 seconds mocha uses
         await resetNeedsNewPwUserState();
 
         const loginResponse = await request(app)
@@ -121,7 +107,7 @@ describe('Integration Test for Auth Controller', function() {
             .send(needsNewPwUserInfo);
         
         expect(loginResponse.status).to.equal(400);
-        expect(loginResponse.body.message).to.equal('New password required.');
+        expect(loginResponse.body.message).to.equal(AUTH_MSG_NEW_PASSWORD_REQUIRED);
         
         const newPasswordResponse = await request(app)
             .post(`${baseUri}/login`)
@@ -137,7 +123,7 @@ describe('Integration Test for Auth Controller', function() {
             .send({ ...existingUserInfo, password: 'wrongPassword' });
 
         expect(response.status).to.equal(401);
-        expect(response.body.message).to.equal('Invalid email or password');
+        expect(response.body.message).to.equal(AUTH_MSG_INVALID_CREDENTIALS);
     });
 
     it('should not login with incorrect credentials - bad user', async function() {
@@ -146,7 +132,7 @@ describe('Integration Test for Auth Controller', function() {
             .send({ email: 'nonexistentuser@example.com', password: 'somePassword' });
 
         expect(response.status).to.equal(401);
-        expect(response.body.message).to.equal('Invalid email or password');
+        expect(response.body.message).to.equal(AUTH_MSG_INVALID_CREDENTIALS);
     });
 
 
