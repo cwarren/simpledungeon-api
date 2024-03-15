@@ -1,13 +1,15 @@
-export const getUserByIdOrEmail = async (userIdOrEmail, cognito) => {
+import { AdminGetUserCommand } from "@aws-sdk/client-cognito-identity-provider";
+
+export const getUserByIdOrEmail = async (userIdOrEmail, cognitoClient) => {
     try {
-        const params = {
-            UserPoolId: process.env.COGNITO_USER_POOL_ID, // Replace with your Cognito User Pool ID
-            Username: userIdOrEmail
-        };
-        const userData = await cognito.adminGetUser(params).promise();
-        return userData;
+        const command = new AdminGetUserCommand({
+            UserPoolId: process.env.COGNITO_USER_POOL_ID, // Replace with your user pool ID
+            Username: userIdOrEmail, // The username of the user you want to get information about
+        });
+        const response = await cognitoClient.send(command);
+        return response;
     } catch (error) {
-        console.error('Error getting user:', error);
+        console.error("Error fetching user information:", error);
         return {};
     }
-};
+}

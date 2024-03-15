@@ -1,14 +1,9 @@
-import request from 'supertest';
-import { expect, assert } from 'chai';
-import { ObjectId } from 'mongodb';
-import AWS from 'aws-sdk';
+import { expect } from 'chai';
 import dotenv from 'dotenv';
   
-import { app } from '../app.js';
-// import { getDb, dbClose } from '../dbClient.js';
+import { CognitoIdentityProviderClient } from "@aws-sdk/client-cognito-identity-provider";
 
 import { getUserByIdOrEmail } from './utils.js';
-import { registerUser, login, logout, removeUser } from "./controller.js";
 
 if(process.env.NODE_ENV === 'test') {
     dotenv.config({ path: '.env.test' });
@@ -16,28 +11,14 @@ if(process.env.NODE_ENV === 'test') {
     dotenv.config();
 }
 
-AWS.config.update({
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-    region: process.env.AWS_REGION
-  });
-const cognito = new AWS.CognitoIdentityServiceProvider();
+const cognitoClient = new CognitoIdentityProviderClient({
+    region: process.env.AWS_REGION,
+});
 
 const testExistingUserEmail = process.env.TEST_USER_EXISTING_EMAIL;
 const testExistingUserId = process.env.TEST_USER_EXISTING_ID;
-const testExistingUserPassword = process.env.TEST_USER_EXISTING_PASSWORD;
-const testNewUserEmail = process.env.TEST_USER_NEW_EMAIL;
-const testNewUserPassword = process.env.TEST_USER_NEW_PASSWORD;
 
 describe('Test for Auth Utils', function() {
-    const baseUri = '/auth';
-
-    const existingUserInfo = {
-        email: testExistingUserEmail,
-        password: testExistingUserPassword,
-    }
-
-    let newUserId;
 
     // #############################################
 
@@ -45,24 +26,23 @@ describe('Test for Auth Utils', function() {
     });
 
     after(async function() {
-        // await dbClose();
     });
 
 
     // #############################################
     // util
     it('should get an existing user by id', async function() {
-        const userData = await getUserByIdOrEmail(testExistingUserId, cognito);
+        const userData = await getUserByIdOrEmail(testExistingUserId, cognitoClient);
         expect(userData.Username).to.equal(testExistingUserId);
     });
 
     it('should get an existing user by email', async function() {
-        const userData = await getUserByIdOrEmail(testExistingUserEmail, cognito);
+        const userData = await getUserByIdOrEmail(testExistingUserEmail, cognitoClient);
         expect(userData.Username).to.equal(testExistingUserId);
     });
 
     it('should get an empty result for a non-existing user', async function() {
-        const userData = await getUserByIdOrEmail('blahblahblah', cognito);
+        const userData = await getUserByIdOrEmail('blahblahblah', cognitoClient);
         expect(Object.keys(userData)).to.be.empty;
     });
 });
