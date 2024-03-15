@@ -96,11 +96,15 @@ describe('Integration Test for Auth Controller', function() {
 
     it('should allow access to protected endpoint once logged in', async function() {
         this.timeout(10000); // Increase timeout to 10 seconds for this test, since actual auth may take longer than the default 2 seconds mocha uses
+        
+        let protectedResponse = await request(app).get(protectedURI);
+        expect(protectedResponse.status).to.equal(401);
+
         const loginResponse = await request(app)
             .post(`${baseUri}/login`)
             .send(existingUserInfo);
 
-        const protectedResponse = await request(app).get(protectedURI).set('Authorization', `Bearer ${loginResponse.body.accessToken}`);
+        protectedResponse = await request(app).get(protectedURI).set('Authorization', `Bearer ${loginResponse.body.accessToken}`);
         expect(protectedResponse.status).to.equal(200);
         expect(protectedResponse.body.message).to.equal(authSuccessMessage);      
     });
