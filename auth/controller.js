@@ -1,7 +1,8 @@
 import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
 import { CognitoIdentityProviderClient, InitiateAuthCommand, RespondToAuthChallengeCommand } from "@aws-sdk/client-cognito-identity-provider";
-import { createHmac } from 'crypto';
+
+import { getSecretHash } from './utils.js';
 
 if(process.env.NODE_ENV === 'test') {
     dotenv.config({ path: '.env.test' });
@@ -12,17 +13,6 @@ if(process.env.NODE_ENV === 'test') {
 const cognitoClient = new CognitoIdentityProviderClient({
     region: process.env.AWS_REGION,
 });
-
-// ###################################
-// supporting functions
-
-function getSecretHash(email, clientId) {
-    const clientSecret = process.env.COGNITO_APP_CLIENT_SECRET;
-    const secretHash = createHmac('SHA256', clientSecret)
-                          .update(email + clientId)
-                          .digest('base64');
-    return secretHash;
-}
 
 // ###################################
 // registration / sign up

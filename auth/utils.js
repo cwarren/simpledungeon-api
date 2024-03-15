@@ -1,10 +1,11 @@
 import { AdminGetUserCommand } from "@aws-sdk/client-cognito-identity-provider";
+import { createHmac } from 'crypto';
 
 export const getUserByIdOrEmail = async (userIdOrEmail, cognitoClient) => {
     try {
         const command = new AdminGetUserCommand({
-            UserPoolId: process.env.COGNITO_USER_POOL_ID, // Replace with your user pool ID
-            Username: userIdOrEmail, // The username of the user you want to get information about
+            UserPoolId: process.env.COGNITO_USER_POOL_ID,
+            Username: userIdOrEmail,
         });
         const response = await cognitoClient.send(command);
         return response;
@@ -12,4 +13,12 @@ export const getUserByIdOrEmail = async (userIdOrEmail, cognitoClient) => {
         console.error("Error fetching user information:", error);
         return {};
     }
+}
+
+export function getSecretHash(email, clientId) {
+    const clientSecret = process.env.COGNITO_APP_CLIENT_SECRET;    
+    const secretHash = createHmac('SHA256', clientSecret)
+                          .update(email + clientId)
+                          .digest('base64');
+    return secretHash;
 }

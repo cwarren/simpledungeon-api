@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
+import jwksRsa from 'jwks-rsa';
 
 if(process.env.NODE_ENV === 'test') {
     dotenv.config({ path: '.env.test' });
@@ -7,23 +8,30 @@ if(process.env.NODE_ENV === 'test') {
     dotenv.config();
 }
 
-export function verifyJWT (req, res, next) {
-    const token = req.headers.authorization?.split(' ')[1];
+const jwksUri = `https://cognito-idp.${process.env.AWS_REGION}.amazonaws.com/${process.env.COGNITO_USER_POOL_ID}/.well-known/jwks.json`;
+const client = jwksRsa({
+  jwksUri: jwksUri,
+});
+
+function getKey(header, callback) {
+    client.getSigningKey(header.kid, (err, key) => {
+        const signingKey = key.publicKey || key.rsaPublicKey;
+        callback(null, signingKey);
+    });
+}
   
-    if (!token) {
+export function verifyJWT(req, res, next) {
+    const accessToken = req.headers.authorization?.split(' ')[1];
+
+    if (!accessToken) {
         return res.status(401).send({ message: 'Unauthorized' });
     }
-  
-    try {
-        jwt.verify(token, process.env.COGNITO_APP_CLIENT_SECRET, (err, decoded) => {
-            if (err) {
-                return res.status(401).send({ message: 'Invalid token' });
-            }
-            req.user = decoded;
-            next();
-        });
-    } catch (error) {
-        console.error('Error verifying JWT:', error);
-        return res.status(500).send({ message: 'Internal server error' });
-    }
-};
+
+    jwt.verify(accessToken, getKey, { algorithms: ['RS256'] }, (err, decoded) => {
+        if (err) {
+            return res.status(401).send({ message: 'Invalid access token' });
+        }
+        req.user = decoded;
+        next();
+    });
+}
