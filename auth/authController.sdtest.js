@@ -51,16 +51,31 @@ describe('Integration Test for Auth Controller', function() {
 
     // #############################################
     // login
-    it.skip('should allow an existing user to login', async function() {
-        assert.fail('This test has not been implemented');
+    it('should allow an existing user to login', async function() {
+        this.timeout(10000); // Increase timeout to 10 seconds for this test, since actual auth may take longer
+        const response = await request(app)
+            .post(`${baseUri}/login`)
+            .send(existingUserInfo);
+
+        expect(response.status).to.equal(200);
     });
 
-    it.skip('should prevent login for an existing user with an invalid password', async function() {
-        assert.fail('This test has not been implemented');
+    it('should prevent login for an existing user with an invalid password', async function() {
+        const response = await request(app)
+            .post(`${baseUri}/login`)
+            .send({ ...existingUserInfo, password: 'wrongPassword' });
+
+        expect(response.status).to.equal(401);
+        expect(response.body.message).to.equal('Invalid email or password');
     });
 
-    it.skip('should prevent login for an invalid user', async function() {
-        assert.fail('This test has not been implemented');
+    it('should prevent login for an invalid user', async function() {
+        const response = await request(app)
+            .post(`${baseUri}/login`)
+            .send({ email: 'nonexistentuser@example.com', password: 'somePassword' });
+
+        expect(response.status).to.equal(401);
+        expect(response.body.message).to.equal('Invalid email or password');
     });
 
 

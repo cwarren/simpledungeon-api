@@ -8,6 +8,7 @@ import { getDb, dbClose } from '../dbClient.js';
 
 import { getUserByIdOrEmail } from './utils.js';
 
+import { createHmac } from 'crypto';
 import { CognitoIdentityProviderClient, InitiateAuthCommand } from "@aws-sdk/client-cognito-identity-provider";
 
 
@@ -47,6 +48,11 @@ export async function registerUser(req, res, _next) {
 
 export async function login(req, res, _next) {
     const { email, password } = req.body;
+    const clientSecret = process.env.COGNITO_APP_CLIENT_SECRET; // Make sure this is set in your environment variables
+
+    const secretHash = createHmac('SHA256', clientSecret)
+                          .update(email + process.env.COGNITO_APP_CLIENT_ID)
+                          .digest('base64');
 
     const client = new CognitoIdentityProviderClient({
         region: process.env.AWS_REGION,
@@ -58,11 +64,13 @@ export async function login(req, res, _next) {
         AuthParameters: {
             USERNAME: email,
             PASSWORD: password,
+            SECRET_HASH: secretHash,
         },
     });
 
     try {
-        const { AuthenticationResult } = await client.send(command);
+        const loginCommandResult = await client.send(command);
+        const { AuthenticationResult } = loginCommandResult;
         res.status(200).send({
             accessToken: AuthenticationResult.AccessToken,
             idToken: AuthenticationResult.IdToken,
@@ -70,33 +78,9 @@ export async function login(req, res, _next) {
         });
     } catch (error) {
         console.error('Error logging in user:', error);
-        if (error.name === 'NotAuthorizedException') {
-            res.status(401).send({ message: 'Invalid email or password' });
-        } else {
-            res.status(500).send({ message: 'An error occurred during login' });
-        }
+        res.status(401).send({ message: 'Invalid email or password' });
     }
 }
-
-// export async function login(req, res, _next) {
-//     const { email, password } = req.body;
-
-//     const params = {
-//         AuthFlow: 'USER_PASSWORD_AUTH',
-//         ClientId: process.env.COGNITO_USER_POOL_ID,
-//         AuthParameters: {
-//             USERNAME: email
-//         }
-//     };
-
-//     try {
-//         const data = await cognito.initiateAuth(params).promise();
-//         res.status(200).send({ accessToken: data.AuthenticationResult.AccessToken });
-//     } catch (error) {
-//         console.error('Error logging in user:', error);
-//         res.status(401).send({ message: 'Invalid email or password' });
-//     }
-// }
 
 export async function logout(req, res, _next) {
 }
