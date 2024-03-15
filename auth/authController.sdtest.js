@@ -51,14 +51,17 @@ describe('Integration Test for Auth Controller', function() {
 
     // #############################################
     // login
-    it('should allow an existing user to login', async function() {
+    it('should allow an existing user with no password challenge to login', async function() {
         this.timeout(10000); // Increase timeout to 10 seconds for this test, since actual auth may take longer
         const response = await request(app)
             .post(`${baseUri}/login`)
             .send(existingUserInfo);
 
-        expect(response.status).to.equal(200);
-    });
+            expect(response.status).to.equal(200);
+            expect(response.body.accessToken).to.exist;
+            expect(response.body.idToken).to.exist;
+            expect(response.body.refreshToken).to.exist;
+        });
 
     it('should prevent login for an existing user with an invalid password', async function() {
         const response = await request(app)
