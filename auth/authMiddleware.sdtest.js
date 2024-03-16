@@ -83,22 +83,22 @@ describe('Tests for Auth Middleware', function() {
     // #############################################
     // middleware unit tests
 
-    it('should deny verification if the authorization header is not present', function() {
-        verifyJWT(req, res, next);
+    it('should deny verification if the authorization header is not present', async function() {
+        await verifyJWT(req, res, next);
         expect(res.statusCode).to.equal(401);
         expect(res.body).to.deep.equal({ message: AUTH_MSG_UNAUTHORIZED });
     });
 
-    it('should deny verification if the auth token is invalid', function() {
+    it('should deny verification if the auth token is invalid', async function() {
         req.headers.authorization = `Bearer ${tokens.invalidToken}`;
-        verifyJWT(req, res, next);
+        await verifyJWT(req, res, next);
         expect(res.statusCode).to.equal(401);
         expect(res.body).to.deep.equal({ message: AUTH_MSG_BAD_TOKEN });
     });
 
-    it('should deny verification if the auth token is expired', function() {
+    it('should deny verification if the auth token is expired', async function() {
         req.headers.authorization = `Bearer ${tokens.expiredToken}`;
-        verifyJWT(req, res, next);
+        await verifyJWT(req, res, next);
         expect(res.statusCode).to.equal(401);
         expect(res.body).to.deep.equal({ message: AUTH_MSG_BAD_TOKEN });
     });

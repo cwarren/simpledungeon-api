@@ -115,7 +115,7 @@ export async function login(req, res, _next) {
 export async function logout(req, res) {
     const token = req.headers.authorization?.split(' ')[1];
     if (token && req.user) {
-        blacklistToken(token);
+        await blacklistToken(token, req.user.exp);
         res.status(200).send({ message: AUTH_MSG_LOGGED_OUT });
     } else {
         res.status(400).send({ message: AUTH_MSG_NO_SESSION });

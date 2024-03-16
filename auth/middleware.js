@@ -22,10 +22,11 @@ function getKey(header, callback) {
     });
 }
   
-export function verifyJWT(req, res, next) {
+export async function verifyJWT(req, res, next) {
     const accessToken = req.headers.authorization?.split(' ')[1];
 
-    if (!accessToken || isBlacklistedToken(accessToken)) {
+    const isBlacklisted = await isBlacklistedToken(accessToken);
+    if (!accessToken || isBlacklisted) {
         return res.status(401).send({ message: AUTH_MSG_UNAUTHORIZED });
     }
 

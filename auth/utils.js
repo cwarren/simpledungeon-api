@@ -1,5 +1,8 @@
 import { AdminGetUserCommand } from "@aws-sdk/client-cognito-identity-provider";
 import { createHmac } from 'crypto';
+import { getDb }  from '../dbClient.js';
+
+// #######################
 
 export const getUserByIdOrEmail = async (userIdOrEmail, cognitoClient) => {
     try {
@@ -15,6 +18,8 @@ export const getUserByIdOrEmail = async (userIdOrEmail, cognitoClient) => {
     }
 }
 
+// #######################
+
 export function getSecretHash(email, clientId) {
     const clientSecret = process.env.COGNITO_APP_CLIENT_SECRET;    
     const secretHash = createHmac('SHA256', clientSecret)
@@ -23,12 +28,16 @@ export function getSecretHash(email, clientId) {
     return secretHash;
 }
 
-const tokenBlacklist = {};
+// #######################
 
-export function blacklistToken(token) {
-    tokenBlacklist[token] = true;
+export async function blacklistToken(token, tokenExpiration) {
+    const expiresAt = new Date(tokenExpiration * 1000); // JWT exp is in seconds
+    const dbClient = getDb();
+    await dbClient.collection("blacklistedTokens").insertOne({ token, expiresAt });
 }
 
-export function isBlacklistedToken(token) {
-    return tokenBlacklist[token] === true;
+export async function isBlacklistedToken(token) {
+    const dbClient = getDb();
+    const tokenEntry = await dbClient.collection("blacklistedTokens").findOne({ token });
+    return !!tokenEntry;
 }
