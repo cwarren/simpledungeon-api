@@ -160,8 +160,11 @@ describe('Integration Test for Auth Controller', function() {
 
     // #############################################
     // logout
-    it.skip('should do nothing for logout if the user is not logged in', async function() {
-        assert.fail('This test has not been implemented');
+    it('should disallow logout if the user is not logged in', async function() {
+        const logoutResponse = await request(app)
+            .post(`${baseUri}/logout`);
+        expect(logoutResponse.status).to.equal(401);
+        expect(logoutResponse.body.message).to.equal('Unauthorized');
     });
 
     it('should allow an existing logged user to logout', async function() {
@@ -173,14 +176,28 @@ describe('Integration Test for Auth Controller', function() {
     
         const logoutResponse = await request(app)
             .post(`${baseUri}/logout`)
-            .set('Authorization', `Bearer ${loginResponse.body.accessToken}`);;
+            .set('Authorization', `Bearer ${loginResponse.body.accessToken}`);
         expect(logoutResponse.status).to.equal(200);
         expect(logoutResponse.body.message).to.equal(AUTH_MSG_LOGGED_OUT);
     });
 
-    it.skip('should disallow access a protected endpoint after logout', async function() {
-        assert.fail('This test has not been implemented');
+    it('should disallow access a protected endpoint after logout', async function() {
+        const loginResponse = await request(app)
+            .post(`${baseUri}/login`)
+            .send(existingUserInfo);
+        expect(loginResponse.status).to.equal(200);
+
+        let protectedResponse = await request(app).get(protectedURI).set('Authorization', `Bearer ${loginResponse.body.accessToken}`);
+        expect(protectedResponse.status).to.equal(200);
+
+        const logoutResponse = await request(app)
+            .post(`${baseUri}/logout`)
+            .set('Authorization', `Bearer ${loginResponse.body.accessToken}`);
+        expect(logoutResponse.status).to.equal(200);
         
+        protectedResponse = await request(app).get(protectedURI).set('Authorization', `Bearer ${loginResponse.body.accessToken}`);
+        expect(protectedResponse.status).to.equal(401);
+        expect(protectedResponse.body.message).to.equal('Unauthorized');
     });
 
 

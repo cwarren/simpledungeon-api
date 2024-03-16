@@ -24,12 +24,8 @@ function getKey(header, callback) {
 export function verifyJWT(req, res, next) {
     const accessToken = req.headers.authorization?.split(' ')[1];
 
-    if (!accessToken) {
+    if (!accessToken || isBlacklistedToken(accessToken)) {
         return res.status(401).send({ message: 'Unauthorized' });
-    }
-
-    if (isBlacklistedToken(accessToken)) {
-        return res.status(401).send({ message: 'Token has been revoked' });
     }
 
     jwt.verify(accessToken, getKey, { algorithms: ['RS256'] }, (err, decoded) => {
