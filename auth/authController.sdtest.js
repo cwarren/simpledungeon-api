@@ -5,7 +5,7 @@ import { CognitoIdentityProviderClient, AdminSetUserPasswordCommand } from "@aws
   
 import { app } from '../app.js';
 import { verifyJWT } from './middleware.js';
-import { AUTH_MSG_NEW_PASSWORD_REQUIRED, AUTH_MSG_INVALID_CREDENTIALS } from "./controller.js";
+import { AUTH_MSG_NEW_PASSWORD_REQUIRED, AUTH_MSG_INVALID_CREDENTIALS, AUTH_MSG_LOGGED_OUT } from "./controller.js";
 
 if(process.env.NODE_ENV === 'test') {
     dotenv.config({ path: '.env.test' });
@@ -164,8 +164,23 @@ describe('Integration Test for Auth Controller', function() {
         assert.fail('This test has not been implemented');
     });
 
-    it.skip('should allow an existing logged user to logout', async function() {
+    it('should allow an existing logged user to logout', async function() {
+        const loginResponse = await request(app)
+            .post(`${baseUri}/login`)
+            .send(existingUserInfo);
+        expect(loginResponse.status).to.equal(200);
+        expect(loginResponse.body.accessToken).to.exist;
+    
+        const logoutResponse = await request(app)
+            .post(`${baseUri}/logout`)
+            .set('Authorization', `Bearer ${loginResponse.body.accessToken}`);;
+        expect(logoutResponse.status).to.equal(200);
+        expect(logoutResponse.body.message).to.equal(AUTH_MSG_LOGGED_OUT);
+    });
+
+    it.skip('should disallow access a protected endpoint after logout', async function() {
         assert.fail('This test has not been implemented');
+        
     });
 
 

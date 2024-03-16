@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
 import { CognitoIdentityProviderClient, InitiateAuthCommand, RespondToAuthChallengeCommand } from "@aws-sdk/client-cognito-identity-provider";
 
-import { getSecretHash } from './utils.js';
+import { getSecretHash, blacklistToken  } from './utils.js';
 
 if(process.env.NODE_ENV === 'test') {
     dotenv.config({ path: '.env.test' });
@@ -43,6 +43,7 @@ export async function registerUser(req, res, _next) {
 
 export const AUTH_MSG_NEW_PASSWORD_REQUIRED = 'New password required.';
 export const AUTH_MSG_INVALID_CREDENTIALS = 'Invalid email or password';
+export const AUTH_MSG_LOGGED_OUT = 'Successfully logged out';
 
 async function handleChallengeNewPasswordRequired(authResult, email, newPassword, secretHash) {
     if (authResult.ChallengeName === 'NEW_PASSWORD_REQUIRED') {
@@ -107,7 +108,14 @@ export async function login(req, res, _next) {
 // ###################################
 // logout
 
-export async function logout(req, res, _next) {
+export async function logout(req, res) {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (token && req.user) {
+        blacklistToken(token);
+        res.status(200).send({ message: 'Successfully logged out' });
+    } else {
+        res.status(400).send({ message: 'No active session' });
+    }
 }
 
 // ###################################

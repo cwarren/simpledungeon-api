@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import jwksRsa from 'jwks-rsa';
+import { isBlacklistedToken } from './utils.js';
 
 if(process.env.NODE_ENV === 'test') {
     dotenv.config({ path: '.env.test' });
@@ -25,6 +26,10 @@ export function verifyJWT(req, res, next) {
 
     if (!accessToken) {
         return res.status(401).send({ message: 'Unauthorized' });
+    }
+
+    if (isBlacklistedToken(accessToken)) {
+        return res.status(401).send({ message: 'Token has been revoked' });
     }
 
     jwt.verify(accessToken, getKey, { algorithms: ['RS256'] }, (err, decoded) => {

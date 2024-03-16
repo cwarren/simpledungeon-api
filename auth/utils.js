@@ -22,3 +22,13 @@ export function getSecretHash(email, clientId) {
                           .digest('base64');
     return secretHash;
 }
+
+const tokenBlacklist = {};
+
+export function blacklistToken(token) {
+    tokenBlacklist[token] = true;
+}
+
+export function isBlacklistedToken(token) {
+    return tokenBlacklist[token] === true;
+}
