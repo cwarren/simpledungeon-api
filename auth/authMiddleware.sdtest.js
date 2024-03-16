@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
 import { CognitoIdentityProviderClient, InitiateAuthCommand } from "@aws-sdk/client-cognito-identity-provider";
 import { getSecretHash } from './utils.js';
+import { AUTH_MSG_UNAUTHORIZED, AUTH_MSG_BAD_TOKEN } from './controller.js';
   
 import { app } from '../app.js';
 
@@ -85,21 +86,21 @@ describe('Tests for Auth Middleware', function() {
     it('should deny verification if the authorization header is not present', function() {
         verifyJWT(req, res, next);
         expect(res.statusCode).to.equal(401);
-        expect(res.body).to.deep.equal({ message: 'Unauthorized' });
+        expect(res.body).to.deep.equal({ message: AUTH_MSG_UNAUTHORIZED });
     });
 
     it('should deny verification if the auth token is invalid', function() {
         req.headers.authorization = `Bearer ${tokens.invalidToken}`;
         verifyJWT(req, res, next);
         expect(res.statusCode).to.equal(401);
-        expect(res.body).to.deep.equal({ message: 'Invalid access token' });
+        expect(res.body).to.deep.equal({ message: AUTH_MSG_BAD_TOKEN });
     });
 
     it('should deny verification if the auth token is expired', function() {
         req.headers.authorization = `Bearer ${tokens.expiredToken}`;
         verifyJWT(req, res, next);
         expect(res.statusCode).to.equal(401);
-        expect(res.body).to.deep.equal({ message: 'Invalid access token' });
+        expect(res.body).to.deep.equal({ message: AUTH_MSG_BAD_TOKEN });
     });
 
     it('should set the user in the request if the token verification succeeds', async function() {
@@ -128,14 +129,14 @@ describe('Tests for Auth Middleware', function() {
       const response = await request(app).get(protectedURI);
   
       expect(response.status).to.equal(401);
-      expect(response.body.message).to.equal('Unauthorized');
+      expect(response.body.message).to.equal(AUTH_MSG_UNAUTHORIZED);
     });
   
     it('should block access with an invalid token', async function() {
       const response = await request(app).get(protectedURI).set('Authorization', 'Bearer wrongtoken');
   
       expect(response.status).to.equal(401);
-      expect(response.body.message).to.equal('Invalid access token');
+      expect(response.body.message).to.equal(AUTH_MSG_BAD_TOKEN);
     });
 
     it('should allow access with a valid token', async function() {

@@ -14,6 +14,14 @@ const cognitoClient = new CognitoIdentityProviderClient({
     region: process.env.AWS_REGION,
 });
 
+export const AUTH_MSG_NEW_PASSWORD_REQUIRED = 'New password required.';
+export const AUTH_MSG_INVALID_CREDENTIALS = 'Invalid email or password';
+export const AUTH_MSG_LOGGED_OUT = 'Successfully logged out';
+export const AUTH_MSG_UNAUTHORIZED = 'Unauthorized';
+export const AUTH_MSG_BAD_TOKEN = 'Invalid access token';
+export const AUTH_MSG_GENERIC_LOGIN_FAILURE = 'Login failed';
+export const AUTH_MSG_NO_SESSION = 'No active session';
+
 // ###################################
 // registration / sign up
 
@@ -41,10 +49,6 @@ export async function registerUser(req, res, _next) {
 // ###################################
 // login
 
-export const AUTH_MSG_NEW_PASSWORD_REQUIRED = 'New password required.';
-export const AUTH_MSG_INVALID_CREDENTIALS = 'Invalid email or password';
-export const AUTH_MSG_LOGGED_OUT = 'Successfully logged out';
-
 async function handleChallengeNewPasswordRequired(authResult, email, newPassword, secretHash) {
     if (authResult.ChallengeName === 'NEW_PASSWORD_REQUIRED') {
         if (!newPassword) {
@@ -68,7 +72,7 @@ async function handleChallengeNewPasswordRequired(authResult, email, newPassword
 }
 
 export async function login(req, res, _next) {
-    const { email, password, newPassword } = req.body; // Assume `newPassword` is provided if needed
+    const { email, password, newPassword } = req.body;
     const secretHash = getSecretHash(email, process.env.COGNITO_APP_CLIENT_ID);
 
     const authCommand = new InitiateAuthCommand({
@@ -97,7 +101,7 @@ export async function login(req, res, _next) {
             });
         } else {
             console.error('No authentication result returned');
-            res.status(401).send({ message: 'Login failed' });
+            res.status(401).send({ message: AUTH_MSG_GENERIC_LOGIN_FAILURE });
         }
     } catch (error) {
         console.error('Error logging in user:', error);
@@ -112,9 +116,9 @@ export async function logout(req, res) {
     const token = req.headers.authorization?.split(' ')[1];
     if (token && req.user) {
         blacklistToken(token);
-        res.status(200).send({ message: 'Successfully logged out' });
+        res.status(200).send({ message: AUTH_MSG_LOGGED_OUT });
     } else {
-        res.status(400).send({ message: 'No active session' });
+        res.status(400).send({ message: AUTH_MSG_NO_SESSION });
     }
 }
 

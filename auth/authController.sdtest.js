@@ -5,7 +5,7 @@ import { CognitoIdentityProviderClient, AdminSetUserPasswordCommand } from "@aws
   
 import { app } from '../app.js';
 import { verifyJWT } from './middleware.js';
-import { AUTH_MSG_NEW_PASSWORD_REQUIRED, AUTH_MSG_INVALID_CREDENTIALS, AUTH_MSG_LOGGED_OUT } from "./controller.js";
+import { AUTH_MSG_NEW_PASSWORD_REQUIRED, AUTH_MSG_INVALID_CREDENTIALS, AUTH_MSG_LOGGED_OUT, AUTH_MSG_UNAUTHORIZED } from "./controller.js";
 
 if(process.env.NODE_ENV === 'test') {
     dotenv.config({ path: '.env.test' });
@@ -164,7 +164,7 @@ describe('Integration Test for Auth Controller', function() {
         const logoutResponse = await request(app)
             .post(`${baseUri}/logout`);
         expect(logoutResponse.status).to.equal(401);
-        expect(logoutResponse.body.message).to.equal('Unauthorized');
+        expect(logoutResponse.body.message).to.equal(AUTH_MSG_UNAUTHORIZED);
     });
 
     it('should allow an existing logged user to logout', async function() {
@@ -197,7 +197,7 @@ describe('Integration Test for Auth Controller', function() {
         
         protectedResponse = await request(app).get(protectedURI).set('Authorization', `Bearer ${loginResponse.body.accessToken}`);
         expect(protectedResponse.status).to.equal(401);
-        expect(protectedResponse.body.message).to.equal('Unauthorized');
+        expect(protectedResponse.body.message).to.equal(AUTH_MSG_UNAUTHORIZED);
     });
 
 
