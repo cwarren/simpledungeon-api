@@ -1,7 +1,7 @@
 import request from 'supertest';
 import { expect, assert } from 'chai';
 import dotenv from 'dotenv';
-import { CognitoIdentityProviderClient, AdminSetUserPasswordCommand, AdminCreateUserCommand, AdminDeleteUserCommand } from "@aws-sdk/client-cognito-identity-provider";
+import { CognitoIdentityProviderClient, AdminSetUserPasswordCommand, AdminCreateUserCommand, AdminConfirmSignUpCommand, AdminDeleteUserCommand } from "@aws-sdk/client-cognito-identity-provider";
 
   
 import { app } from '../app.js';
@@ -16,6 +16,7 @@ import {
     AUTH_MSG_REGISTRATION_BAD_EMAIL,
     AUTH_MSG_REGISTRATION_ALREADY_REGISTERED,
     AUTH_MSG_REGISTRATION_POOR_PASSWORD,
+    AUTH_MSG_USER_EXPUNGED,
 } from "./controller.js";
 import { getUserByIdOrEmail } from './utils.js';
 
@@ -70,6 +71,44 @@ async function removeCognitoUser(email) {
     }
 }
 
+async function createAndConfirmUser(email, password) {
+    const createUserParams = {
+      UserPoolId: process.env.COGNITO_USER_POOL_ID,
+      Username: email,
+      TemporaryPassword: password,
+      MessageAction: 'SUPPRESS', // To prevent sending an invitation message to the user
+      UserAttributes: [
+        {
+          Name: 'email',
+          Value: email,
+        },
+        {
+          Name: 'email_verified',
+          Value: 'true',
+        }
+      ],
+    };
+  
+    try {
+        const createUserResponse = await cognitoClient.send(new AdminCreateUserCommand(createUserParams));
+        console.log('User created:', createUserResponse);
+
+        // This makes the password permanent and moves the user out of FORCE_CHANGE_PASSWORD state
+        // and as a side effect also means the email confirmation is handled (since in cognito it's
+        // all a part of the same flow, I think)
+        const setUserPasswordParams = {
+            UserPoolId: process.env.COGNITO_USER_POOL_ID,
+            Username: email,
+            Password: password,
+            Permanent: true, 
+        };
+        await cognitoClient.send(new AdminSetUserPasswordCommand(setUserPasswordParams));
+        console.log('User password set and user confirmed');
+    } catch (error) {
+        console.error('Error creating or setting password or confirming user:', error);
+    }
+}
+
 // ###############################
 // actual tests
 
@@ -87,6 +126,11 @@ describe('Integration Tests for Auth Controller', function() {
     const needsNewPwUserInfo = {
         email: testNeedsNewPwUserEmail,
         password: testNeedsNewPwUserPassword,
+    }
+
+    const newUserInfo = {
+        email: testNewUserEmail,
+        password: testNewUserPassword,
     }
 
     let newUserId;
@@ -230,7 +274,7 @@ describe('Integration Tests for Auth Controller', function() {
 
     // #############################################
     // register
-    
+
     describe('Register User Integration Test', function() {
         it('should allow an new user to register with a valid email address and password', async function() {
             const response = await request(app)
@@ -290,12 +334,36 @@ describe('Integration Tests for Auth Controller', function() {
 
     // #############################################
     // expunge
-    it.skip('should do nothing for expunge if the user is not logged in', async function() {
-        assert.fail('This test has not been implemented');
-    });
+    describe('Expunge User Integration Test', function() {
+        it('should disallow user removal if the user is not logged in', async function() {
+            const expungeResponse = await request(app)
+                .post(`${baseUri}/expunge`);
+            expect(expungeResponse.status).to.equal(401);
+            expect(expungeResponse.body.message).to.equal(AUTH_MSG_UNAUTHORIZED);
+        });
 
-    it.skip('should logout the user and remove their account', async function() {
-        assert.fail('This test has not been implemented');
+        it('should logout the user and remove their account', async function() {
+            await createAndConfirmUser(testNewUserEmail, testNewUserPassword);
+
+            const loginResponse = await request(app)
+                .post(`${baseUri}/login`)
+                .send(newUserInfo);
+            expect(loginResponse.status).to.equal(200);
+            expect(loginResponse.body.accessToken).to.exist;
+        
+            const expungeResponse = await request(app)
+                .post(`${baseUri}/expunge`)
+                .set('Authorization', `Bearer ${loginResponse.body.accessToken}`);
+            expect(expungeResponse.status).to.equal(200);
+            expect(expungeResponse.body.message).to.equal(AUTH_MSG_USER_EXPUNGED);
+
+            const userInfo = await getUserByIdOrEmail(testNewUserEmail, cognitoClient);
+            expect(userInfo).to.be.empty;
+        });
+
+        it.skip('should mark their application data for deletion due to user expunging', async function() {
+            assert.fail('This test has not been implemented (waiting on user application data to exist)');
+        });
     });
 
 });

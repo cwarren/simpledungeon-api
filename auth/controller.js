@@ -26,6 +26,8 @@ export const AUTH_MSG_REGISTRATION_GENERIC_FAILURE = 'Error registering user.';
 export const AUTH_MSG_REGISTRATION_BAD_EMAIL = 'Error registering user - Invalid email address.';
 export const AUTH_MSG_REGISTRATION_ALREADY_REGISTERED = 'Error registering user -  An account with the given email already exists.';
 export const AUTH_MSG_REGISTRATION_POOR_PASSWORD = 'Password did not conform with policy.';
+export const AUTH_MSG_USER_EXPUNGED = 'User account and associated data have been removed.';
+
 
 // ###################################
 // registration / sign up
@@ -149,4 +151,11 @@ export async function logout(req, res) {
 // remove user / expunge
 
 export async function removeUser(req, res, _next) {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (token && req.user) {
+        await blacklistToken(token, req.user.exp);
+        res.status(200).send({ message: AUTH_MSG_LOGGED_OUT });
+    } else {
+        res.status(400).send({ message: AUTH_MSG_NO_SESSION });
+    }
 }
