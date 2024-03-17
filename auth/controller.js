@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
-import { CognitoIdentityProviderClient, InitiateAuthCommand, RespondToAuthChallengeCommand } from "@aws-sdk/client-cognito-identity-provider";
+import { CognitoIdentityProviderClient, InitiateAuthCommand, RespondToAuthChallengeCommand, SignUpCommand  } from "@aws-sdk/client-cognito-identity-provider";
 
 import { getSecretHash, blacklistToken  } from './utils.js';
 
@@ -27,23 +27,28 @@ export const AUTH_MSG_NO_SESSION = 'No active session';
 
 export async function registerUser(req, res, _next) {
     const { email, password } = req.body;
-    res.status(500).send({ message: 'User regsitration is not yet supported' });
-    // const params = {
-    //     Username: email,
-    //     Password: password,
-    //     UserPoolId: process.env.COGNITO_USER_POOL_ID,
-    //     UserAttributes: [
-    //         { Name: 'email', Value: email }
-    //     ]
-    // };
+    const secretHash = getSecretHash(email, process.env.COGNITO_APP_CLIENT_ID);
 
-    // try {
-    //     await cognito.signUp(params).promise();
-    //     res.status(201).send({ message: 'User created successfully!' });
-    // } catch (error) {
-    //     console.error('Error creating user:', error);
-    //     res.status(500).send({ message: 'Error creating user' });
-    // }
+    const params = {
+        ClientId: process.env.COGNITO_APP_CLIENT_ID,
+        Username: email,
+        Password: password,
+        SecretHash: secretHash,
+        UserAttributes: [
+            {
+                Name: 'email',
+                Value: email
+            },
+        ],
+    };
+
+    try {
+        await cognitoClient.send(new SignUpCommand(params));
+        res.status(200).send({ message: 'User registration successful. Please check your email to confirm your account.' });
+    } catch (error) {
+        console.error('Error registering user:', error);
+        res.status(500).send({ message: 'Error registering user.' });
+    }
 }
 
 // ###################################

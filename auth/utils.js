@@ -20,6 +20,18 @@ export const getUserByIdOrEmail = async (userIdOrEmail, cognitoClient) => {
 
 // #######################
 
+export function generateRandomString(ofLength) {
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    const charactersLength = characters.length;
+    for (let i = 0; i < ofLength; i++) {
+        result += characters.charAt(Math.floor(Math.random() * charactersLength));
+    }
+    return result;
+}
+
+// #######################
+
 export function getSecretHash(email, clientId) {
     const clientSecret = process.env.COGNITO_APP_CLIENT_SECRET;    
     const secretHash = createHmac('SHA256', clientSecret)

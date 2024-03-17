@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
   
 import { CognitoIdentityProviderClient } from "@aws-sdk/client-cognito-identity-provider";
 
-import { getUserByIdOrEmail, getSecretHash } from './utils.js';
+import { getUserByIdOrEmail, getSecretHash, generateRandomString } from './utils.js';
 
 if(process.env.NODE_ENV === 'test') {
     dotenv.config({ path: '.env.test' });
@@ -44,6 +44,31 @@ describe('Test for Auth Utils', function() {
     it('should get an empty result for a non-existing user', async function() {
         const userData = await getUserByIdOrEmail('blahblahblah', cognitoClient);
         expect(Object.keys(userData)).to.be.empty;
+    });
+
+    // #############################################
+    // generateRandomString
+
+    describe('generateRandomString function', function() {
+        it('should return a string of 16 characters', function() {
+            const result = generateRandomString(16);
+            expect(result).to.be.a('string');
+            expect(result).to.have.lengthOf(16);
+        });
+    
+        it('should only contain alphanumeric characters', function() {
+            const result = generateRandomString(24);
+            expect(result).to.match(/^[A-Za-z0-9]+$/);
+        });
+    
+        it('should produce unique strings in successive calls', function() {
+            const attempts = 100;
+            const results = new Set();
+            for (let i = 0; i < attempts; i++) {
+                results.add(generateRandomString(16));
+            }
+            expect(results.size).to.equal(attempts);
+        });
     });
 
     // #############################################
