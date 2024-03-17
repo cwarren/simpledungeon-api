@@ -3,7 +3,6 @@ import { expect, assert } from 'chai';
 import dotenv from 'dotenv';
 import { CognitoIdentityProviderClient, AdminSetUserPasswordCommand, AdminCreateUserCommand, AdminConfirmSignUpCommand, AdminDeleteUserCommand } from "@aws-sdk/client-cognito-identity-provider";
 
-  
 import { app } from '../app.js';
 import { verifyJWT } from './middleware.js';
 import {
@@ -335,6 +334,14 @@ describe('Integration Tests for Auth Controller', function() {
     // #############################################
     // expunge
     describe('Expunge User Integration Test', function() {
+
+        after(async function() {
+            const newUserInfo = await getUserByIdOrEmail(testNewUserEmail, cognitoClient);
+            if (newUserInfo) {
+                removeCognitoUser(testNewUserEmail);
+            }
+        });
+
         it('should disallow user removal if the user is not logged in', async function() {
             const expungeResponse = await request(app)
                 .post(`${baseUri}/expunge`);

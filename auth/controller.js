@@ -1,7 +1,11 @@
 import dotenv from 'dotenv';
-import jwt from 'jsonwebtoken';
-import { CognitoIdentityProviderClient, InitiateAuthCommand, RespondToAuthChallengeCommand, SignUpCommand  } from "@aws-sdk/client-cognito-identity-provider";
-
+import {
+    CognitoIdentityProviderClient, 
+    InitiateAuthCommand,
+    RespondToAuthChallengeCommand,
+    SignUpCommand, 
+    AdminDeleteUserCommand } 
+    from "@aws-sdk/client-cognito-identity-provider";
 import { getSecretHash, blacklistToken  } from './utils.js';
 
 if(process.env.NODE_ENV === 'test') {
@@ -27,6 +31,7 @@ export const AUTH_MSG_REGISTRATION_BAD_EMAIL = 'Error registering user - Invalid
 export const AUTH_MSG_REGISTRATION_ALREADY_REGISTERED = 'Error registering user -  An account with the given email already exists.';
 export const AUTH_MSG_REGISTRATION_POOR_PASSWORD = 'Password did not conform with policy.';
 export const AUTH_MSG_USER_EXPUNGED = 'User account and associated data have been removed.';
+export const AUTH_MSG_USER_EXPUNGED_GENERIC_FAILURE = 'Could not remove user.';
 
 
 // ###################################
@@ -153,8 +158,19 @@ export async function logout(req, res) {
 export async function removeUser(req, res, _next) {
     const token = req.headers.authorization?.split(' ')[1];
     if (token && req.user) {
+        console.dir(req.user);
         await blacklistToken(token, req.user.exp);
-        res.status(200).send({ message: AUTH_MSG_LOGGED_OUT });
+        try {
+            await cognitoClient.send(new AdminDeleteUserCommand({
+                UserPoolId: process.env.COGNITO_USER_POOL_ID,
+                Username: req.user.username,
+            }));
+            res.status(200).send({ message: AUTH_MSG_USER_EXPUNGED });
+        } catch (error) {
+            console.error(`Failed to remove user ${req.user.email}:`, error);
+            res.status(500).send({ message: AUTH_MSG_USER_EXPUNGED_GENERIC_FAILURE });
+        }
+        
     } else {
         res.status(400).send({ message: AUTH_MSG_NO_SESSION });
     }
