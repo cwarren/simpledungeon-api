@@ -6,8 +6,18 @@ import { CognitoIdentityProviderClient, AdminSetUserPasswordCommand, AdminCreate
   
 import { app } from '../app.js';
 import { verifyJWT } from './middleware.js';
-import { AUTH_MSG_NEW_PASSWORD_REQUIRED, AUTH_MSG_INVALID_CREDENTIALS, AUTH_MSG_LOGGED_OUT, AUTH_MSG_UNAUTHORIZED } from "./controller.js";
-import { getUserByIdOrEmail, generateRandomString } from './utils.js';
+import {
+    AUTH_MSG_NEW_PASSWORD_REQUIRED,
+    AUTH_MSG_INVALID_CREDENTIALS, 
+    AUTH_MSG_LOGGED_OUT, 
+    AUTH_MSG_UNAUTHORIZED,
+    AUTH_MSG_REGISTRATION_SUCCESS,
+    AUTH_MSG_REGISTRATION_GENERIC_FAILURE,
+    AUTH_MSG_REGISTRATION_BAD_EMAIL,
+    AUTH_MSG_REGISTRATION_ALREADY_REGISTERED,
+    AUTH_MSG_REGISTRATION_POOR_PASSWORD,
+} from "./controller.js";
+import { getUserByIdOrEmail } from './utils.js';
 
 
 if(process.env.NODE_ENV === 'test') {
@@ -220,12 +230,8 @@ describe('Integration Tests for Auth Controller', function() {
 
     // #############################################
     // register
+    
     describe('Register User Integration Test', function() {
-
-        after(async function() {
-            await removeCognitoUser(testNewUserEmail);
-        });
-
         it('should allow an new user to register with a valid email address and password', async function() {
             const response = await request(app)
                 .post(`${baseUri}/register`)
@@ -235,21 +241,49 @@ describe('Integration Tests for Auth Controller', function() {
                 });
 
             expect(response.status).to.equal(200);
-            expect(response.body.message).to.include('registration successful');
+            expect(response.body.message).to.equal(AUTH_MSG_REGISTRATION_SUCCESS);
 
             const userInfo = await getUserByIdOrEmail(testNewUserEmail, cognitoClient);
-            console.dir(userInfo);
             expect(userInfo.UserAttributes).to.satisfy((attributes) => 
                 attributes.some(attr => attr.Name === 'email' && attr.Value === testNewUserEmail));
-    
+
+            await removeCognitoUser(testNewUserEmail);
         });
 
-        it.skip('should prevent an new user from registering with an invalid email', async function() {
-            assert.fail('This test has not been implemented');
+        it('should prevent an new user from registering with an invalid email', async function() {
+            const response = await request(app)
+                .post(`${baseUri}/register`)
+                .send({
+                    email: 'notAnEmail',
+                    password: testNewUserPassword,
+                });
+
+            expect(response.status).to.equal(400);
+            expect(response.body.message).to.equal(AUTH_MSG_REGISTRATION_BAD_EMAIL);
         });
 
-        it.skip('should prevent an new user from registering with an email that is already registered', async function() {
-            assert.fail('This test has not been implemented');
+        it('should prevent an new user from registering with a poor password', async function() {
+            const response = await request(app)
+                .post(`${baseUri}/register`)
+                .send({
+                    email: 'foo@example.com',
+                    password: 'password',
+                });
+
+            expect(response.status).to.equal(400);
+            expect(response.body.message).to.equal(AUTH_MSG_REGISTRATION_POOR_PASSWORD);
+        });
+
+        it('should prevent an new user from registering with an email that is already registered', async function() {
+            const response = await request(app)
+                .post(`${baseUri}/register`)
+                .send({
+                    email: testExistingUserEmail,
+                    password: testNewUserPassword,
+                });
+
+            expect(response.status).to.equal(400);
+            expect(response.body.message).to.equal(AUTH_MSG_REGISTRATION_ALREADY_REGISTERED);
         });
     });
 

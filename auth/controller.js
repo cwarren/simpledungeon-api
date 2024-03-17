@@ -21,6 +21,11 @@ export const AUTH_MSG_UNAUTHORIZED = 'Unauthorized';
 export const AUTH_MSG_BAD_TOKEN = 'Invalid access token';
 export const AUTH_MSG_GENERIC_LOGIN_FAILURE = 'Login failed';
 export const AUTH_MSG_NO_SESSION = 'No active session';
+export const AUTH_MSG_REGISTRATION_SUCCESS = 'User registration successful. Please check your email to confirm your account.';
+export const AUTH_MSG_REGISTRATION_GENERIC_FAILURE = 'Error registering user.';
+export const AUTH_MSG_REGISTRATION_BAD_EMAIL = 'Error registering user - Invalid email address.';
+export const AUTH_MSG_REGISTRATION_ALREADY_REGISTERED = 'Error registering user -  An account with the given email already exists.';
+export const AUTH_MSG_REGISTRATION_POOR_PASSWORD = 'Password did not conform with policy.';
 
 // ###################################
 // registration / sign up
@@ -44,10 +49,23 @@ export async function registerUser(req, res, _next) {
 
     try {
         await cognitoClient.send(new SignUpCommand(params));
-        res.status(200).send({ message: 'User registration successful. Please check your email to confirm your account.' });
+        res.status(200).send({ message: AUTH_MSG_REGISTRATION_SUCCESS });
     } catch (error) {
         console.error('Error registering user:', error);
-        res.status(500).send({ message: 'Error registering user.' });
+        
+        if (error.name === 'InvalidParameterException' && error.message.includes("Invalid email address format")) {
+            return res.status(400).send({ message: AUTH_MSG_REGISTRATION_BAD_EMAIL });
+        }
+
+        if (error.name === 'UsernameExistsException') {
+            return res.status(400).send({ message: AUTH_MSG_REGISTRATION_ALREADY_REGISTERED });
+        }
+
+        if (error.name === 'InvalidPasswordException') {
+            return res.status(400).send({ message: AUTH_MSG_REGISTRATION_POOR_PASSWORD });
+        }
+
+        return res.status(500).send({ message: AUTH_MSG_REGISTRATION_GENERIC_FAILURE });
     }
 }
 
